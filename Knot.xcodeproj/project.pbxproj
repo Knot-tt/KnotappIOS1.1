@@ -1,0 +1,796 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		951D62BD2F8E738200C46413 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 951D62BC2F8E738200C46413 /* Supabase */; };
+		951D63182F8E772800C46413 /* Dashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D62EF2F8E772800C46413 /* Dashboard.swift */; };
+		951D631D2F8E772800C46413 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D62FA2F8E772800C46413 /* MainTabView.swift */; };
+		951D631E2F8E772800C46413 /* NotificationsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D63012F8E772800C46413 /* NotificationsSettingsView.swift */; };
+		951D631F2F8E772800C46413 /* KnotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D62F02F8E772800C46413 /* KnotApp.swift */; };
+		951D63212F8E772800C46413 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D63092F8E772800C46413 /* SearchView.swift */; };
+		951D63232F8E772800C46413 /* ShopView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D630B2F8E772800C46413 /* ShopView.swift */; };
+		951D63242F8E772800C46413 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D62F92F8E772800C46413 /* LoginView.swift */; };
+		951D632A2F8E772800C46413 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D63052F8E772800C46413 /* ProfileView.swift */; };
+		951D632B2F8E772800C46413 /* PrivacySecurityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D63022F8E772800C46413 /* PrivacySecurityView.swift */; };
+		951D632E2F8E772800C46413 /* ManageGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D62FD2F8E772800C46413 /* ManageGroupView.swift */; };
+		951D63302F8E772800C46413 /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D63102F8E772800C46413 /* SupabaseManager.swift */; };
+		951D63322F8E772800C46413 /* MessagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D62FF2F8E772800C46413 /* MessagesView.swift */; };
+		951D63332F8E772800C46413 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D63142F8E772800C46413 /* UserProfile.swift */; };
+		951D63362F8E772800C46413 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D630E2F8E772800C46413 /* SignUpView.swift */; };
+		951D63392F8E772800C46413 /* PurchaseFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D63082F8E772800C46413 /* PurchaseFlow.swift */; };
+		951D633E2F8E772800C46413 /* TransactionFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D63122F8E772800C46413 /* TransactionFlow.swift */; };
+		951D633F2F8E772800C46413 /* WalletPaymentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D63162F8E772800C46413 /* WalletPaymentsView.swift */; };
+		951D6401AAAAAAAA00C46413 /* CommunityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6402AAAAAAAA00C46413 /* CommunityModels.swift */; };
+		951D6403AAAAAAAA00C46413 /* Communityview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6404AAAAAAAA00C46413 /* Communityview.swift */; };
+		951D6405AAAAAAAA00C46413 /* CreateGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6406AAAAAAAA00C46413 /* CreateGroupView.swift */; };
+		951D6407AAAAAAAA00C46413 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6408AAAAAAAA00C46413 /* EditProfileView.swift */; };
+		951D6409AAAAAAAA00C46413 /* HelpSupportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D640AAAAAAAAA00C46413 /* HelpSupportView.swift */; };
+		951D640BAAAAAAAA00C46413 /* KnotIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D640CAAAAAAAA00C46413 /* KnotIcon.swift */; };
+		951D6410AAAAAAAA00C46413 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6411AAAAAAAA00C46413 /* AuthManager.swift */; };
+		951D6420AAAAAAAA00C46413 /* AnnouncementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6421AAAAAAAA00C46413 /* AnnouncementsView.swift */; };
+		951D6440AAAAAAAA00C46413 /* SupabaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6441AAAAAAAA00C46413 /* SupabaseModels.swift */; };
+		951D6447AAAAAAAA00C46413 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6446AAAAAAAA00C46413 /* Configuration.swift */; };
+		951D6448AAAAAAAA00C46413 /* PasswordPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6449AAAAAAAA00C46413 /* PasswordPolicy.swift */; };
+		95E3BEA42F703DEC00D0F1E4 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 95E3BEA32F703DEC00D0F1E4 /* FirebaseAI */; };
+		95E3BEA62F703DEC00D0F1E4 /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = 95E3BEA52F703DEC00D0F1E4 /* FirebaseAILogic */; };
+		95E3BEA82F703DEC00D0F1E4 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 95E3BEA72F703DEC00D0F1E4 /* FirebaseAnalytics */; };
+		95E3BEAA2F703DEC00D0F1E4 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 95E3BEA92F703DEC00D0F1E4 /* FirebaseAnalyticsCore */; };
+		95E3BEAC2F703DEC00D0F1E4 /* FirebaseAnalyticsIdentitySupport in Frameworks */ = {isa = PBXBuildFile; productRef = 95E3BEAB2F703DEC00D0F1E4 /* FirebaseAnalyticsIdentitySupport */; };
+		F5321C3D785D42C8B2CCE418 /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 3E128F03632446829D2EA56D /* StripePaymentSheet */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		95E3BE6A2F6FF27D00D0F1E4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 95E3BE522F6FF27C00D0F1E4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 95E3BE592F6FF27C00D0F1E4;
+			remoteInfo = Knot;
+		};
+		95E3BE742F6FF27D00D0F1E4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 95E3BE522F6FF27C00D0F1E4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 95E3BE592F6FF27C00D0F1E4;
+			remoteInfo = Knot;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		950DB64D2FA722B3008A2F25 /* Knot.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Knot.entitlements; sourceTree = "<group>"; };
+		951D62EF2F8E772800C46413 /* Dashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dashboard.swift; sourceTree = "<group>"; };
+		951D62F02F8E772800C46413 /* KnotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnotApp.swift; sourceTree = "<group>"; };
+		951D62F92F8E772800C46413 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		951D62FA2F8E772800C46413 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		951D62FD2F8E772800C46413 /* ManageGroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageGroupView.swift; sourceTree = "<group>"; };
+		951D62FF2F8E772800C46413 /* MessagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesView.swift; sourceTree = "<group>"; };
+		951D63012F8E772800C46413 /* NotificationsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSettingsView.swift; sourceTree = "<group>"; };
+		951D63022F8E772800C46413 /* PrivacySecurityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacySecurityView.swift; sourceTree = "<group>"; };
+		951D63052F8E772800C46413 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		951D63082F8E772800C46413 /* PurchaseFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseFlow.swift; sourceTree = "<group>"; };
+		951D63092F8E772800C46413 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		951D630B2F8E772800C46413 /* ShopView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopView.swift; sourceTree = "<group>"; };
+		951D630E2F8E772800C46413 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		951D63102F8E772800C46413 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
+		951D63122F8E772800C46413 /* TransactionFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionFlow.swift; sourceTree = "<group>"; };
+		951D63142F8E772800C46413 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
+		951D63162F8E772800C46413 /* WalletPaymentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletPaymentsView.swift; sourceTree = "<group>"; };
+		951D6402AAAAAAAA00C46413 /* CommunityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityModels.swift; sourceTree = "<group>"; };
+		951D6404AAAAAAAA00C46413 /* Communityview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Communityview.swift; sourceTree = "<group>"; };
+		951D6406AAAAAAAA00C46413 /* CreateGroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateGroupView.swift; sourceTree = "<group>"; };
+		951D6408AAAAAAAA00C46413 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
+		951D640AAAAAAAAA00C46413 /* HelpSupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpSupportView.swift; sourceTree = "<group>"; };
+		951D640CAAAAAAAA00C46413 /* KnotIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnotIcon.swift; sourceTree = "<group>"; };
+		951D6411AAAAAAAA00C46413 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		951D6421AAAAAAAA00C46413 /* AnnouncementsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementsView.swift; sourceTree = "<group>"; };
+		951D6441AAAAAAAA00C46413 /* SupabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseModels.swift; sourceTree = "<group>"; };
+		951D6444AAAAAAAA00C46413 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		951D6445AAAAAAAA00C46413 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		951D6446AAAAAAAA00C46413 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
+		951D6449AAAAAAAA00C46413 /* PasswordPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPolicy.swift; sourceTree = "<group>"; };
+		95E3BE5A2F6FF27C00D0F1E4 /* Knot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Knot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		95E3BE692F6FF27D00D0F1E4 /* KnotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		95E3BE732F6FF27D00D0F1E4 /* KnotUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnotUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		95E3BE6C2F6FF27D00D0F1E4 /* KnotTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KnotTests;
+			sourceTree = "<group>";
+		};
+		95E3BE762F6FF27D00D0F1E4 /* KnotUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KnotUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		95E3BE572F6FF27C00D0F1E4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				951D62BD2F8E738200C46413 /* Supabase in Frameworks */,
+				F5321C3D785D42C8B2CCE418 /* StripePaymentSheet in Frameworks */,
+				95E3BEA62F703DEC00D0F1E4 /* FirebaseAILogic in Frameworks */,
+				95E3BEAC2F703DEC00D0F1E4 /* FirebaseAnalyticsIdentitySupport in Frameworks */,
+				95E3BEA42F703DEC00D0F1E4 /* FirebaseAI in Frameworks */,
+				95E3BEA82F703DEC00D0F1E4 /* FirebaseAnalytics in Frameworks */,
+				95E3BEAA2F703DEC00D0F1E4 /* FirebaseAnalyticsCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		95E3BE662F6FF27D00D0F1E4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		95E3BE702F6FF27D00D0F1E4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		951D63412F8E773800C46413 /* Knot */ = {
+			isa = PBXGroup;
+			children = (
+				950DB64D2FA722B3008A2F25 /* Knot.entitlements */,
+				951D62EF2F8E772800C46413 /* Dashboard.swift */,
+				951D62F02F8E772800C46413 /* KnotApp.swift */,
+				951D62F92F8E772800C46413 /* LoginView.swift */,
+				951D62FA2F8E772800C46413 /* MainTabView.swift */,
+				951D62FD2F8E772800C46413 /* ManageGroupView.swift */,
+				951D62FF2F8E772800C46413 /* MessagesView.swift */,
+				951D63012F8E772800C46413 /* NotificationsSettingsView.swift */,
+				951D63022F8E772800C46413 /* PrivacySecurityView.swift */,
+				951D63052F8E772800C46413 /* ProfileView.swift */,
+				951D63082F8E772800C46413 /* PurchaseFlow.swift */,
+				951D63092F8E772800C46413 /* SearchView.swift */,
+				951D630B2F8E772800C46413 /* ShopView.swift */,
+				951D630E2F8E772800C46413 /* SignUpView.swift */,
+				951D63102F8E772800C46413 /* SupabaseManager.swift */,
+				951D6441AAAAAAAA00C46413 /* SupabaseModels.swift */,
+				951D63122F8E772800C46413 /* TransactionFlow.swift */,
+				951D63142F8E772800C46413 /* UserProfile.swift */,
+				951D63162F8E772800C46413 /* WalletPaymentsView.swift */,
+				951D6411AAAAAAAA00C46413 /* AuthManager.swift */,
+				951D6402AAAAAAAA00C46413 /* CommunityModels.swift */,
+				951D6404AAAAAAAA00C46413 /* Communityview.swift */,
+				951D6406AAAAAAAA00C46413 /* CreateGroupView.swift */,
+				951D6408AAAAAAAA00C46413 /* EditProfileView.swift */,
+				951D640AAAAAAAAA00C46413 /* HelpSupportView.swift */,
+				951D640CAAAAAAAA00C46413 /* KnotIcon.swift */,
+				951D6421AAAAAAAA00C46413 /* AnnouncementsView.swift */,
+				951D6444AAAAAAAA00C46413 /* Config.xcconfig */,
+				951D6445AAAAAAAA00C46413 /* Config.xcconfig */,
+				951D6446AAAAAAAA00C46413 /* Configuration.swift */,
+				951D6449AAAAAAAA00C46413 /* PasswordPolicy.swift */,
+			);
+			path = Knot;
+			sourceTree = "<group>";
+		};
+		95E3BE512F6FF27C00D0F1E4 = {
+			isa = PBXGroup;
+			children = (
+				951D63412F8E773800C46413 /* Knot */,
+				95E3BE6C2F6FF27D00D0F1E4 /* KnotTests */,
+				95E3BE762F6FF27D00D0F1E4 /* KnotUITests */,
+				95E3BE5B2F6FF27C00D0F1E4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		95E3BE5B2F6FF27C00D0F1E4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				95E3BE5A2F6FF27C00D0F1E4 /* Knot.app */,
+				95E3BE692F6FF27D00D0F1E4 /* KnotTests.xctest */,
+				95E3BE732F6FF27D00D0F1E4 /* KnotUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		95E3BE592F6FF27C00D0F1E4 /* Knot */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 95E3BE7D2F6FF27D00D0F1E4 /* Build configuration list for PBXNativeTarget "Knot" */;
+			buildPhases = (
+				95E3BE562F6FF27C00D0F1E4 /* Sources */,
+				95E3BE572F6FF27C00D0F1E4 /* Frameworks */,
+				95E3BE582F6FF27C00D0F1E4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Knot;
+			packageProductDependencies = (
+				951D62BC2F8E738200C46413 /* Supabase */,
+				3E128F03632446829D2EA56D /* StripePaymentSheet */,
+				95E3BEA32F703DEC00D0F1E4 /* FirebaseAI */,
+				95E3BEA52F703DEC00D0F1E4 /* FirebaseAILogic */,
+				95E3BEA72F703DEC00D0F1E4 /* FirebaseAnalytics */,
+				95E3BEA92F703DEC00D0F1E4 /* FirebaseAnalyticsCore */,
+				95E3BEAB2F703DEC00D0F1E4 /* FirebaseAnalyticsIdentitySupport */,
+			);
+			productName = Knot;
+			productReference = 95E3BE5A2F6FF27C00D0F1E4 /* Knot.app */;
+			productType = "com.apple.product-type.application";
+		};
+		95E3BE682F6FF27D00D0F1E4 /* KnotTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 95E3BE802F6FF27D00D0F1E4 /* Build configuration list for PBXNativeTarget "KnotTests" */;
+			buildPhases = (
+				95E3BE652F6FF27D00D0F1E4 /* Sources */,
+				95E3BE662F6FF27D00D0F1E4 /* Frameworks */,
+				95E3BE672F6FF27D00D0F1E4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				95E3BE6B2F6FF27D00D0F1E4 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				95E3BE6C2F6FF27D00D0F1E4 /* KnotTests */,
+			);
+			name = KnotTests;
+			packageProductDependencies = (
+			);
+			productName = KnotTests;
+			productReference = 95E3BE692F6FF27D00D0F1E4 /* KnotTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		95E3BE722F6FF27D00D0F1E4 /* KnotUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 95E3BE832F6FF27D00D0F1E4 /* Build configuration list for PBXNativeTarget "KnotUITests" */;
+			buildPhases = (
+				95E3BE6F2F6FF27D00D0F1E4 /* Sources */,
+				95E3BE702F6FF27D00D0F1E4 /* Frameworks */,
+				95E3BE712F6FF27D00D0F1E4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				95E3BE752F6FF27D00D0F1E4 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				95E3BE762F6FF27D00D0F1E4 /* KnotUITests */,
+			);
+			name = KnotUITests;
+			packageProductDependencies = (
+			);
+			productName = KnotUITests;
+			productReference = 95E3BE732F6FF27D00D0F1E4 /* KnotUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		95E3BE522F6FF27C00D0F1E4 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					95E3BE592F6FF27C00D0F1E4 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					95E3BE682F6FF27D00D0F1E4 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 95E3BE592F6FF27C00D0F1E4;
+					};
+					95E3BE722F6FF27D00D0F1E4 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 95E3BE592F6FF27C00D0F1E4;
+					};
+				};
+			};
+			buildConfigurationList = 95E3BE552F6FF27C00D0F1E4 /* Build configuration list for PBXProject "Knot" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 95E3BE512F6FF27C00D0F1E4;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				95E3BEA22F703DEC00D0F1E4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				951D62BB2F8E738200C46413 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				8FF15473641C4BACB51D0354 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 95E3BE5B2F6FF27C00D0F1E4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				95E3BE592F6FF27C00D0F1E4 /* Knot */,
+				95E3BE682F6FF27D00D0F1E4 /* KnotTests */,
+				95E3BE722F6FF27D00D0F1E4 /* KnotUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		95E3BE582F6FF27C00D0F1E4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		95E3BE672F6FF27D00D0F1E4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		95E3BE712F6FF27D00D0F1E4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		95E3BE562F6FF27C00D0F1E4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				951D63182F8E772800C46413 /* Dashboard.swift in Sources */,
+				951D631D2F8E772800C46413 /* MainTabView.swift in Sources */,
+				951D631E2F8E772800C46413 /* NotificationsSettingsView.swift in Sources */,
+				951D631F2F8E772800C46413 /* KnotApp.swift in Sources */,
+				951D63212F8E772800C46413 /* SearchView.swift in Sources */,
+				951D63232F8E772800C46413 /* ShopView.swift in Sources */,
+				951D63242F8E772800C46413 /* LoginView.swift in Sources */,
+				951D632A2F8E772800C46413 /* ProfileView.swift in Sources */,
+				951D632B2F8E772800C46413 /* PrivacySecurityView.swift in Sources */,
+				951D632E2F8E772800C46413 /* ManageGroupView.swift in Sources */,
+				951D63302F8E772800C46413 /* SupabaseManager.swift in Sources */,
+				951D6440AAAAAAAA00C46413 /* SupabaseModels.swift in Sources */,
+				951D63322F8E772800C46413 /* MessagesView.swift in Sources */,
+				951D63332F8E772800C46413 /* UserProfile.swift in Sources */,
+				951D63362F8E772800C46413 /* SignUpView.swift in Sources */,
+				951D63392F8E772800C46413 /* PurchaseFlow.swift in Sources */,
+				951D633E2F8E772800C46413 /* TransactionFlow.swift in Sources */,
+				951D633F2F8E772800C46413 /* WalletPaymentsView.swift in Sources */,
+				951D6410AAAAAAAA00C46413 /* AuthManager.swift in Sources */,
+				951D6401AAAAAAAA00C46413 /* CommunityModels.swift in Sources */,
+				951D6403AAAAAAAA00C46413 /* Communityview.swift in Sources */,
+				951D6405AAAAAAAA00C46413 /* CreateGroupView.swift in Sources */,
+				951D6407AAAAAAAA00C46413 /* EditProfileView.swift in Sources */,
+				951D6409AAAAAAAA00C46413 /* HelpSupportView.swift in Sources */,
+				951D640BAAAAAAAA00C46413 /* KnotIcon.swift in Sources */,
+				951D6420AAAAAAAA00C46413 /* AnnouncementsView.swift in Sources */,
+				951D6447AAAAAAAA00C46413 /* Configuration.swift in Sources */,
+				951D6448AAAAAAAA00C46413 /* PasswordPolicy.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		95E3BE652F6FF27D00D0F1E4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		95E3BE6F2F6FF27D00D0F1E4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		95E3BE6B2F6FF27D00D0F1E4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 95E3BE592F6FF27C00D0F1E4 /* Knot */;
+			targetProxy = 95E3BE6A2F6FF27D00D0F1E4 /* PBXContainerItemProxy */;
+		};
+		95E3BE752F6FF27D00D0F1E4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 95E3BE592F6FF27C00D0F1E4 /* Knot */;
+			targetProxy = 95E3BE742F6FF27D00D0F1E4 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		95E3BE7B2F6FF27D00D0F1E4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		95E3BE7C2F6FF27D00D0F1E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		95E3BE7E2F6FF27D00D0F1E4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 951D6444AAAAAAAA00C46413 /* Config.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Knot/Knot.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = KG5DVZZN8T;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_SupabaseAnonKey = "$(SUPABASE_ANON_KEY)";
+				INFOPLIST_KEY_SupabaseURL = "$(SUPABASE_URL)";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = personal.Knot;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		95E3BE7F2F6FF27D00D0F1E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 951D6444AAAAAAAA00C46413 /* Config.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Knot/Knot.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = KG5DVZZN8T;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_SupabaseAnonKey = "$(SUPABASE_ANON_KEY)";
+				INFOPLIST_KEY_SupabaseURL = "$(SUPABASE_URL)";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = personal.Knot;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		95E3BE812F6FF27D00D0F1E4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = personal.KnotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Knot.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Knot";
+			};
+			name = Debug;
+		};
+		95E3BE822F6FF27D00D0F1E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = personal.KnotTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Knot.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Knot";
+			};
+			name = Release;
+		};
+		95E3BE842F6FF27D00D0F1E4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = personal.KnotUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Knot;
+			};
+			name = Debug;
+		};
+		95E3BE852F6FF27D00D0F1E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = personal.KnotUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Knot;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		95E3BE552F6FF27C00D0F1E4 /* Build configuration list for PBXProject "Knot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				95E3BE7B2F6FF27D00D0F1E4 /* Debug */,
+				95E3BE7C2F6FF27D00D0F1E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		95E3BE7D2F6FF27D00D0F1E4 /* Build configuration list for PBXNativeTarget "Knot" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				95E3BE7E2F6FF27D00D0F1E4 /* Debug */,
+				95E3BE7F2F6FF27D00D0F1E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		95E3BE802F6FF27D00D0F1E4 /* Build configuration list for PBXNativeTarget "KnotTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				95E3BE812F6FF27D00D0F1E4 /* Debug */,
+				95E3BE822F6FF27D00D0F1E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		95E3BE832F6FF27D00D0F1E4 /* Build configuration list for PBXNativeTarget "KnotUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				95E3BE842F6FF27D00D0F1E4 /* Debug */,
+				95E3BE852F6FF27D00D0F1E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8FF15473641C4BACB51D0354 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stripe/stripe-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 23.0.0;
+			};
+		};
+		951D62BB2F8E738200C46413 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+		95E3BEA22F703DEC00D0F1E4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.11.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3E128F03632446829D2EA56D /* StripePaymentSheet */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FF15473641C4BACB51D0354 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
+			productName = StripePaymentSheet;
+		};
+		951D62BC2F8E738200C46413 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 951D62BB2F8E738200C46413 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		95E3BEA32F703DEC00D0F1E4 /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 95E3BEA22F703DEC00D0F1E4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
+		};
+		95E3BEA52F703DEC00D0F1E4 /* FirebaseAILogic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 95E3BEA22F703DEC00D0F1E4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAILogic;
+		};
+		95E3BEA72F703DEC00D0F1E4 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 95E3BEA22F703DEC00D0F1E4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		95E3BEA92F703DEC00D0F1E4 /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 95E3BEA22F703DEC00D0F1E4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		95E3BEAB2F703DEC00D0F1E4 /* FirebaseAnalyticsIdentitySupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 95E3BEA22F703DEC00D0F1E4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsIdentitySupport;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 95E3BE522F6FF27C00D0F1E4 /* Project object */;
+}

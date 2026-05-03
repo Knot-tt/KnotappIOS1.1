@@ -1,0 +1,13 @@
+// Config.xcconfig.example
+// ✅  Committed to git — safe because it contains no real secrets.
+//
+// Setup:
+//   1. Copy this file to Config.xcconfig (same folder, one level up from here)
+//   2. Replace the placeholder values below with your real credentials
+//   3. Never commit Config.xcconfig — it is gitignored
+//
+// Where to find the values:
+//   Supabase Dashboard → Project Settings → API → Project URL + anon/public key
+
+SUPABASE_URL = https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY = your-anon-key-here

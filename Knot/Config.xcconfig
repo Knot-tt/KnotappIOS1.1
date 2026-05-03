@@ -1,0 +1,7 @@
+// Config.xcconfig
+// ⚠️  NOT committed to git — this file is gitignored.
+// Copy Config.xcconfig.example → Config.xcconfig and fill in real values.
+// Get values from: Supabase Dashboard → Project Settings → API
+
+SUPABASE_URL = https:/$()/flwwgpgqoqntpdxygknj.supabase.co
+SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsd3dncGdxb3FudHBkeHlna25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDk1ODIsImV4cCI6MjA5MTUyNTU4Mn0.rwNcUGECCvuyvbH-1htToRw8Y1RRHudUHdwWli-tiBg
