@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Knot</title>
+  <meta name="description" content="Knot's Privacy Policy. How we collect, use, and protect your data." />
+  <link rel="icon" href="icon.png" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,700;1,9..144,900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #f2ede6; --paper2: #e8e2d9; --ink: #111110; --ink2: #3a3a36; --sage: #4a7a5c; --mist: #8aaa90; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--paper); color: var(--ink); font-family: 'DM Sans', sans-serif; font-weight: 300; line-height: 1.7; }
+
+    nav { position: sticky; top: 0; background: var(--paper); height: 68px; display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(1.5rem,5vw,4rem); border-bottom: 1px solid rgba(17,17,16,.1); box-shadow: 0 2px 24px rgba(17,17,16,.05); z-index: 100; }
+    .nav-logo { display: flex; align-items: center; gap: .7rem; text-decoration: none; }
+    .nav-logo img { width: 36px; height: 36px; object-fit: contain; }
+    .nav-logo-text { font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+    .nav-links { display: flex; gap: 2.25rem; list-style: none; }
+    .nav-links a { font-size: .82rem; color: var(--ink2); text-decoration: none; transition: color .2s; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-back { font-size: .82rem; color: var(--ink2); text-decoration: none; border-bottom: 1px solid rgba(17,17,16,.2); transition: color .2s; }
+    .nav-back:hover { color: var(--ink); }
+
+    .page-hero { padding: clamp(4rem,8vw,7rem) clamp(1.5rem,6vw,5rem) clamp(2rem,4vw,3rem); border-bottom: 1px solid rgba(17,17,16,.08); }
+    .page-label { font-family: 'DM Mono', monospace; font-size: .63rem; letter-spacing: .2em; text-transform: uppercase; color: var(--sage); display: flex; align-items: center; gap: .75rem; margin-bottom: 1.5rem; }
+    .page-label::before { content: ''; width: 24px; height: 1px; background: var(--sage); }
+    .page-title { font-family: 'Fraunces', serif; font-size: clamp(2.8rem,6vw,5.5rem); font-weight: 900; line-height: 1.0; letter-spacing: -.025em; color: var(--ink); margin-bottom: 1.25rem; }
+    .page-title em { font-style: italic; color: var(--ink2); font-weight: 700; }
+    .page-meta { font-family: 'DM Mono', monospace; font-size: .65rem; letter-spacing: .12em; color: var(--mist); }
+
+    .page-body { max-width: 760px; padding: clamp(3rem,6vw,5rem) clamp(1.5rem,6vw,5rem); }
+    .policy-section { margin-bottom: 3rem; }
+    .policy-section h2 { font-family: 'Fraunces', serif; font-size: clamp(1.3rem,2.5vw,1.8rem); font-weight: 800; letter-spacing: -.02em; color: var(--ink); margin-bottom: 1rem; padding-bottom: .75rem; border-bottom: 1px solid rgba(17,17,16,.08); }
+    .policy-section p { font-size: .95rem; color: var(--ink2); margin-bottom: .85rem; line-height: 1.8; }
+    .policy-section ul { padding-left: 1.25rem; margin-bottom: .85rem; }
+    .policy-section ul li { font-size: .95rem; color: var(--ink2); margin-bottom: .5rem; line-height: 1.7; }
+    .policy-section a { color: var(--sage); text-decoration: none; border-bottom: 1px solid var(--mist); transition: border-color .2s; }
+    .policy-section a:hover { border-color: var(--sage); }
+    .highlight-box { background: var(--paper2); border-radius: 12px; padding: 1.5rem 1.75rem; margin-bottom: 1rem; border-left: 3px solid var(--sage); }
+    .highlight-box p { margin: 0; font-size: .92rem; color: var(--ink2); }
+
+    footer { background: var(--ink); color: rgba(255,255,255,.45); padding: 2.5rem clamp(1.5rem,6vw,5rem); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+    footer p { font-family: 'DM Mono', monospace; font-size: .6rem; letter-spacing: .1em; }
+    footer a { color: rgba(255,255,255,.4); text-decoration: none; transition: color .2s; }
+    footer a:hover { color: rgba(255,255,255,.7); }
+
+    @media (max-width: 640px) { .nav-links { display: none; } nav { padding: 0 1.25rem; } }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="icon.png" alt="Knot logo" />
+    <span class="nav-logo-text">Knot</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="features.html">Features</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+  </ul>
+  <a href="index.html" class="nav-back">← Back to site</a>
+</nav>
+
+<div class="page-hero">
+  <p class="page-label">Legal</p>
+  <h1 class="page-title">Privacy <em>Policy.</em></h1>
+  <p class="page-meta">Last updated: 9 June 2026 &nbsp;·&nbsp; Meenakshi Sharma</p>
+</div>
+
+<div class="page-body">
+
+  <div class="policy-section">
+    <div class="highlight-box">
+      <p>We built Knot to bring people together offline — not to harvest your data. This policy explains plainly what we collect, why, and how you stay in control.</p>
+    </div>
+  </div>
+
+  <div class="policy-section">
+    <h2>1. Who We Are</h2>
+    <p>Knot is operated by Meenakshi Sharma (operating as Knot: Tied Together), based in Singapore. When this policy says "Knot", "we", "us", or "our", it refers to Meenakshi Sharma.</p>
+    <p>Knot is subject to Singapore's <strong>Personal Data Protection Act 2012 (PDPA)</strong>, administered by the Personal Data Protection Commission (PDPC). We have designated a Data Protection Officer (DPO) responsible for our compliance with the PDPA. You can reach the DPO at <a href="mailto:joinknot.app@gmail.com">joinknot.app@gmail.com</a>.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>2. What We Collect</h2>
+    <p>We collect only what we need to make Knot work:</p>
+    <ul>
+      <li><strong>Account information</strong> — your name, email address, and profile photo when you sign up.</li>
+      <li><strong>Content you create</strong> — the groups you join, posts, marketplace listings, RSVPs, and messages you send through Knot.</li>
+      <li><strong>Device &amp; usage data</strong> — device type, operating system version, app version, and how you use the app, for debugging, performance, and improving features.</li>
+    </ul>
+    <p>We do not collect advertising IDs or national identification numbers (NRIC/FIN), and we do not build advertising profiles or sell your data. Knot does not process payments — any transactions between users happen directly between them, by their own means, and we don't collect or store payment or card details.</p>
+    <p>If you give us personal data about another person (for example, when reporting a user or sharing contact information), you confirm you have their consent or are otherwise authorised under the PDPA to share it with us.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>3. How We Use Your Data</h2>
+    <p>Your data is used to:</p>
+    <ul>
+      <li>Create and manage your Knot account</li>
+      <li>Show you relevant local groups, meetups, and marketplace listings</li>
+      <li>Send you notifications you've opted into (RSVPs, messages, group updates)</li>
+      <li>Improve the app through anonymous, aggregated analytics</li>
+      <li>Prevent abuse and fraud, and keep the community safe</li>
+      <li>Comply with our legal obligations</li>
+    </ul>
+    <p>We never sell your personal data or use it for third-party advertising. We won't use your data for any purpose beyond this policy without telling you and, where the PDPA requires it, getting your consent. We take reasonable steps to keep the data we hold accurate, especially before using it to make a decision that affects you.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>4. Consent &amp; Legal Basis (PDPA)</h2>
+    <p>Under the PDPA, consent is our main basis for handling your personal data. By creating an account and using Knot, you consent to the collection and use of your data as described in this policy.</p>
+    <p>In some cases the PDPA lets us handle data without separate consent, including:</p>
+    <ul>
+      <li>Where it's reasonably necessary to provide a service you've asked for — for example, creating your account or processing a payment you start (known as deemed consent by contractual necessity).</li>
+      <li>Legitimate interests — such as keeping the platform secure and preventing fraud, where this doesn't unfairly affect you.</li>
+      <li>Where required or authorised by Singapore law, or by a valid legal process.</li>
+      <li>To prevent or detect a crime, or protect someone's safety.</li>
+    </ul>
+    <p>You can withdraw consent at any time by emailing <a href="mailto:joinknot.app@gmail.com">joinknot.app@gmail.com</a>. Withdrawing may affect your ability to use parts of Knot — we'll explain the likely consequences when you ask. Withdrawal doesn't affect anything we did lawfully before then.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>5. Sharing Your Data</h2>
+    <p>We share data only in these limited cases:</p>
+    <ul>
+      <li><strong>With other users</strong> — your public profile (name, photo, groups) is visible to other Knot users in your area.</li>
+      <li><strong>Service providers</strong> — <strong>Supabase</strong> hosts our database, authentication, and storage. They handle data only to provide these services to us, under data processing agreements that require them to protect your data to a standard comparable to the PDPA.</li>
+      <li><strong>Legal requirements</strong> — if required by law or to protect the safety of our users.</li>
+      <li><strong>Business transfers</strong> — if Knot is acquired, your data may transfer to the new owner under equivalent privacy protections.</li>
+    </ul>
+    <p>Some of these providers store data on servers outside Singapore (for example, Supabase servers located in Japan). When data is transferred overseas, we make sure it stays protected to a standard comparable to the PDPA, through contractual data processing agreements and the providers' own compliance commitments.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>6. Data Retention &amp; Account Deletion</h2>
+    <p>You can delete your account at any time directly in the app, under <strong>Profile → Settings → Delete Account</strong>.</p>
+    <p>When you delete your account, we delete or anonymise your personal data within 30 days — except where we're required to keep certain records by law (for example, to investigate abuse or fraud, or to meet a legal obligation). We otherwise keep personal data only for as long as needed to provide Knot or to meet a legal obligation.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>7. Your Rights</h2>
+    <p>Under the PDPA, you have the right to:</p>
+    <ul>
+      <li>Access the personal data we hold about you</li>
+      <li>Correct inaccurate or incomplete data</li>
+      <li>Request deletion of your data</li>
+      <li>Request a copy of your data, which we'll provide in a common, machine-readable format where practicable</li>
+      <li>Withdraw consent at any time (where we rely on consent)</li>
+      <li>Opt out of non-essential communications at any time</li>
+      <li>Lodge a complaint with the PDPC at <a href="https://www.pdpc.gov.sg" target="_blank" rel="noopener">www.pdpc.gov.sg</a> if you believe your data has been handled in breach of the PDPA</li>
+    </ul>
+    <p>To exercise any of these, email <a href="mailto:joinknot.app@gmail.com">joinknot.app@gmail.com</a> from your registered account email with a description of your request. We may verify your identity first, and we'll respond within 30 days. If we're legally allowed to decline a request, we'll explain why. Please also keep your own information up to date via Profile → Settings.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>8. Cookies &amp; Tracking</h2>
+    <p>Knot uses only minimal, essential cookies — for authentication and security. We do not use advertising cookies or third-party tracking pixels in the app or on our website.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>9. Children's Privacy</h2>
+    <p>Knot is intended for users aged 17 and above, because it includes in-person meetups and user-generated content. We do not knowingly collect personal data from anyone under 17, and if we learn that we have, we'll delete it promptly.</p>
+    <p>Users who are 17 (and so under 18) should use Knot only with the consent of a parent or legal guardian, who is responsible for supervising their use and ensuring they understand this policy. We write this policy in plain language so younger users can understand it.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>10. Safety &amp; User Content</h2>
+    <p>Knot lets users post content, message each other, and meet in person. To keep the community safe, the app includes tools to <strong>report</strong> content or users, <strong>block</strong> abusive users, and filter objectionable content. We review reports and act on them, which may include removing content or suspending accounts.</p>
+    <p>To report a safety concern or abuse, use the in-app report tools or email us at <a href="mailto:joinknot.app@gmail.com">joinknot.app@gmail.com</a>. Always take sensible precautions when meeting people in person.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>11. Security &amp; Breach Notification</h2>
+    <p>We use industry-standard security measures, including encryption in transit (TLS) and at rest. No system is ever completely secure, but we work to protect your data. If you find a security vulnerability, please report it to <a href="mailto:joinknot.app@gmail.com">joinknot.app@gmail.com</a>.</p>
+    <p>If a data breach occurs that is notifiable under the PDPA, we'll notify the PDPC no later than 3 calendar days after assessing that the breach is notifiable, and we'll notify affected users as soon as practicable where required.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>12. Third-Party Links</h2>
+    <p>Knot may contain links to third-party websites or services (for example, resources shared by users). We don't control these and aren't responsible for their content or privacy practices. Review their privacy policies before sharing personal data with them.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>13. Changes to This Policy</h2>
+    <p>We may update this policy as Knot grows. When we make significant changes, we'll notify you through the app or by email. The "last updated" date at the top reflects the current version.</p>
+  </div>
+
+  <div class="policy-section">
+    <h2>14. Contact &amp; Data Protection Officer</h2>
+    <p>Questions or concerns about your personal data? Contact our designated Data Protection Officer (DPO):</p>
+    <p>
+      <strong>Data Protection Officer (DPO)</strong><br/>
+      Meenakshi Sharma (operating as Knot: Tied Together)<br/>
+      Singapore<br/>
+      <a href="mailto:joinknot.app@gmail.com">joinknot.app@gmail.com</a><br/>
+      <em>Monitored during Singapore business hours (SGT, UTC+8).</em>
+    </p>
+    <p>We respond to all enquiries within 30 days. If you're not satisfied with our response, you can lodge a complaint directly with the <strong>Personal Data Protection Commission (PDPC)</strong> at <a href="https://www.pdpc.gov.sg" target="_blank" rel="noopener">www.pdpc.gov.sg</a>.</p>
+  </div>
+
+</div>
+
+<footer>
+  <p>&copy; 2026 Meenakshi Sharma &nbsp;·&nbsp; Singapore</p>
+  <p>
+    <a href="privacy.html">Privacy Policy</a> &nbsp;·&nbsp;
+    <a href="terms.html">Terms &amp; Conditions</a> &nbsp;·&nbsp;
+    <a href="index.html">Back to site</a>
+  </p>
+</footer>
+
+</body>
+</html>

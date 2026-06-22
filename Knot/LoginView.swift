@@ -1,6 +1,7 @@
 import SwiftUI
 import Supabase
 import Auth
+import AuthenticationServices
 
 // MARK: - Country Code Data
 struct CountryCode: Identifiable {
@@ -33,6 +34,72 @@ let countryCodes: [CountryCode] = [
     CountryCode(name: "New Zealand",    code: "+64",  minDigits: 8,  maxDigits: 9),
 ]
 
+let passwordRecoveryNameKey = "PasswordRecoveryName"
+let passwordRecoveryContactKey = "PasswordRecoveryContact"
+let passwordRecoveryUsesPhoneKey = "PasswordRecoveryUsesPhone"
+
+func normalizeRecoveryName(_ value: String) -> String {
+    value
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+}
+
+func normalizeRecoveryEmail(_ value: String) -> String {
+    value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+}
+
+func normalizeRecoveryPhone(_ countryCode: String, number: String) -> String {
+    countryCode + number.filter(\.isNumber)
+}
+
+func isRecoveryEmailValid(_ email: String) -> Bool {
+    let pattern = #"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"#
+    return email.range(of: pattern, options: .regularExpression) != nil
+}
+
+func isRecoveryPhoneValid(_ phone: String, country: CountryCode) -> Bool {
+    let digits = phone.filter(\.isNumber)
+    return digits.count >= country.minDigits && digits.count <= country.maxDigits
+}
+
+enum PasswordRecoveryService {
+    enum RecoveryError: LocalizedError {
+        case phoneRecoveryUnavailable
+
+        var errorDescription: String? {
+            switch self {
+            case .phoneRecoveryUnavailable:
+                return "Password recovery by phone isn't available yet. Use your email address instead."
+            }
+        }
+    }
+
+    @AppStorage(passwordRecoveryNameKey) private static var recoveryName = ""
+    @AppStorage(passwordRecoveryContactKey) private static var recoveryContact = ""
+    @AppStorage(passwordRecoveryUsesPhoneKey) private static var recoveryUsesPhone = false
+
+    @MainActor
+    static func resetPassword(
+        name: String,
+        contact: String,
+        usesPhone: Bool,
+        newPassword: String
+    ) async throws {
+        guard !usesPhone else {
+            throw RecoveryError.phoneRecoveryUnavailable
+        }
+
+        recoveryName = name
+        recoveryContact = contact
+        recoveryUsesPhone = false
+
+        try await supabase.auth.resetPasswordForEmail(
+            contact,
+            redirectTo: URL(string: "knot://auth/callback")!
+        )
+    }
+}
+
 // MARK: - Login View
 struct LoginView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -45,7 +112,7 @@ struct LoginView: View {
     @State private var selectedCountry = countryCodes[0]
     @State private var showCountryPicker = false
     @State private var showPassword    = false
-    @State private var showForgotSheet = false
+
 
     var body: some View {
         NavigationStack {
@@ -56,17 +123,16 @@ struct LoginView: View {
                 // Welcome Header
                 Text("Welcome to Knot")
                     .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
 
                 Spacer().frame(height: 8)
 
-                // Social Login Buttons
+                // Social Login Buttons — Apple first per HIG; required alongside any
+                // third-party social login (App Review Guideline 4.8).
                 VStack(spacing: 12) {
+                    AppleSignInButton()
                     SocialLoginButton(label: "Continue with Google", iconText: "G") {
                         Task { await authManager.signInWithGoogle() }
-                    }
-                    SocialLoginButton(label: "Continue with Apple", icon: "apple.logo") {
-                        Task { await authManager.signInWithApple() }
                     }
                 }
                 if let err = authManager.socialAuthError {
@@ -79,13 +145,13 @@ struct LoginView: View {
                 // Divider
                 HStack(spacing: 12) {
                     Rectangle()
-                        .fill(Color(.systemGray4))
+                        .fill(Color.knotBorder)
                         .frame(height: 1)
                     Text("or")
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(Color.knotMuted)
                     Rectangle()
-                        .fill(Color(.systemGray4))
+                        .fill(Color.knotBorder)
                         .frame(height: 1)
                 }
                 .padding(.vertical, 4)
@@ -100,14 +166,14 @@ struct LoginView: View {
                                 HStack(spacing: 4) {
                                     Text(selectedCountry.code)
                                         .font(.subheadline)
-                                        .foregroundColor(.black)
+                                        .foregroundColor(.primary)
                                     Image(systemName: "chevron.down")
                                         .font(.caption)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.secondary)
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 14)
-                                .background(Color(.systemGray5))
+                                .background(Color.knotSurface)
                                 .cornerRadius(12, corners: [.topLeft, .bottomLeft])
                             }
 
@@ -115,15 +181,16 @@ struct LoginView: View {
                             TextField("Enter phone number", text: $phone)
                                 .keyboardType(.phonePad)
                                 .padding()
-                                .background(Color(.systemGray6))
+                                .background(Color.knotSurface)
                                 .cornerRadius(12, corners: [.topRight, .bottomRight])
                         }
+                        .knotSurfaceBorder(cornerRadius: 12)
 
                         // Toggle back to email
                         Button(action: { usePhone = false }) {
                             Text("Enter email instead")
                                 .font(.caption)
-                                .foregroundColor(.gray)
+                                .foregroundColor(Color.knotAccent)
                         }
 
                     } else {
@@ -132,14 +199,15 @@ struct LoginView: View {
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
                             .padding()
-                            .background(Color(.systemGray6))
+                            .background(Color.knotSurface)
                             .cornerRadius(12)
+                            .knotSurfaceBorder(cornerRadius: 12)
 
                         // Toggle to phone
                         Button(action: { usePhone = true }) {
                             Text("Enter phone number instead")
                                 .font(.caption)
-                                .foregroundColor(.gray)
+                                .foregroundColor(Color.knotAccent)
                         }
                     }
                 }
@@ -154,12 +222,13 @@ struct LoginView: View {
                     }
                     Button(action: { showPassword.toggle() }) {
                         Image(systemName: showPassword ? "eye.slash" : "eye")
-                            .foregroundColor(.gray)
+                            .foregroundColor(Color.knotMuted)
                     }
                 }
                 .padding()
-                .background(Color(.systemGray6))
+                .background(Color.knotSurface)
                 .cornerRadius(12)
+                .knotSurfaceBorder(cornerRadius: 12)
 
                 // Login Button
                 Button(action: { Task { await login() } }) {
@@ -168,12 +237,12 @@ struct LoginView: View {
                     } else {
                         Text("Login")
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(Color.knotOnAccent)
                             .frame(maxWidth: .infinity)
                     }
                 }
                 .padding()
-                .background(Color.black)
+                .background(Color.knotAccent)
                 .cornerRadius(12)
                 .disabled(isLoading)
 
@@ -184,28 +253,30 @@ struct LoginView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                // Forgot Password + Sign Up
-                HStack(spacing: 24) {
-                    Button(action: { showForgotSheet = true }) {
-                        Text("Forgot Password?")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                    }
+                HStack(spacing: 20) {
                     NavigationLink(destination: SignUpView()) {
                         Text("Sign Up")
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(Color.knotAccent)
+                    }
+
+                    NavigationLink(destination: ForgotPasswordView()) {
+                        Text("Forgot Password?")
+                            .font(.subheadline)
+                            .foregroundColor(Color.knotAccent)
                     }
                 }
 
                 Spacer()
             }
             .padding(.horizontal, 24)
-            .background(Color.white.ignoresSafeArea())
-            // Forgot Password Sheet
-            .sheet(isPresented: $showForgotSheet) {
-                ForgotPasswordView(onDone: { showForgotSheet = false })
-            }
+            .background(
+                Color.knotBackground.ignoresSafeArea()
+                    .onTapGesture {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                                       to: nil, from: nil, for: nil)
+                    }
+            )
             // Country Picker Sheet
             .sheet(isPresented: $showCountryPicker) {
                 CountryPickerView(selectedCountry: $selectedCountry, isPresented: $showCountryPicker)
@@ -230,7 +301,10 @@ struct LoginView: View {
 
         do {
             if usePhone {
-                try await supabase.auth.signIn(phone: identifier, password: password)
+                // Phone accounts are stored under a deterministic internal email
+                // (no SMS provider) — sign in with that, not the phone identifier.
+                let internalEmail = AuthManager.phoneInternalEmail(forE164: identifier)
+                try await supabase.auth.signIn(email: internalEmail, password: password)
             } else {
                 try await supabase.auth.signIn(email: identifier, password: password)
             }
@@ -269,13 +343,13 @@ struct CountryPickerView: View {
                 }) {
                     HStack {
                         Text(country.name)
-                            .foregroundColor(.black)
+                            .foregroundColor(.primary)
                         Spacer()
                         Text(country.code)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                         if country.id == selectedCountry.id {
                             Image(systemName: "checkmark")
-                                .foregroundColor(.black)
+                                .foregroundColor(.primary)
                         }
                     }
                 }
@@ -314,252 +388,278 @@ struct RoundedCorner: Shape {
 }
 
 // MARK: - Social Login Button
+//
+// Mirrors the Apple Sign In button style exactly:
+// filled black + white text in light mode, filled white + black text in dark mode.
 struct SocialLoginButton: View {
     var label: String
     var icon: String = ""
     var iconText: String? = nil
     var action: () -> Void = {}
 
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var bgColor: Color  { colorScheme == .dark ? .white : .black }
+    private var fgColor: Color  { colorScheme == .dark ? .black : .white }
+
     var body: some View {
         Button(action: action) {
-            HStack {
+            HStack(spacing: 6) {
                 if let letter = iconText {
                     Text(letter)
-                        .font(.system(size: 16, weight: .bold))
-                        .frame(width: 20)
+                        .font(.system(size: 19, weight: .semibold))
+                        .frame(width: 22)
                 } else {
                     Image(systemName: icon)
+                        .font(.system(size: 19, weight: .semibold))
                 }
                 Text(label)
-                    .fontWeight(.medium)
+                    .font(.system(size: 19, weight: .semibold))
             }
-            .foregroundColor(.black)
+            .foregroundColor(fgColor)
             .frame(maxWidth: .infinity)
-            .padding()
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(.systemGray4), lineWidth: 1)
-            )
+            .frame(height: 52)
+            .background(bgColor)
+            .cornerRadius(12)
         }
     }
 }
 
 // MARK: - Forgot Password Flow
 
-// Step 1: Enter email or phone
 struct ForgotPasswordView: View {
-    var onDone: () -> Void = {}
-    @State private var usePhone          = false
-    @State private var email             = ""
-    @State private var phone             = ""
-    @State private var selectedCountry   = countryCodes[0]
+    @State private var name = ""
+    @State private var usePhone = false
+    @State private var email = ""
+    @State private var phone = ""
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+    @State private var selectedCountry = countryCodes[0]
     @State private var showCountryPicker = false
-    @State private var goToVerify        = false
+    @State private var isLoading = false
+    @State private var errorMessage: String? = nil
+    @State private var successMessage: String? = nil
+    @State private var showPassword = false
 
-    private var canContinue: Bool { usePhone ? !phone.isEmpty : !email.isEmpty }
-    private var contact: String   { usePhone ? selectedCountry.code + phone : email }
+    private var normalizedName: String {
+        normalizeRecoveryName(name)
+    }
+
+    private var normalizedContact: String {
+        usePhone
+            ? normalizeRecoveryPhone(selectedCountry.code, number: phone)
+            : normalizeRecoveryEmail(email)
+    }
+
+    private var passwordIssue: String? {
+        PasswordPolicy.errorMessage(for: newPassword)
+    }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
+        VStack(spacing: 24) {
+            Spacer()
 
-                VStack(spacing: 8) {
-                    Image(systemName: "lock.rotation")
-                        .font(.system(size: 48))
-                        .foregroundColor(.black)
-                    Text("Reset Password")
-                        .font(.system(size: 28, weight: .bold))
-                    Text("Enter the email or phone number associated with your account and we'll send you a verification code.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+            VStack(spacing: 8) {
+                Image(systemName: "lock.rotation")
+                    .font(.system(size: 48))
+                    .foregroundColor(.primary)
+                Text("Forgot Password")
+                    .font(.system(size: 28, weight: .bold))
+                Text("Enter your name, your email or phone number, and your new password. This screen is wired for the future backend reset endpoint.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            VStack(spacing: 12) {
+                TextField("Name", text: $name)
+                    .padding()
+                    .background(Color.knotSurface)
+                    .cornerRadius(12)
+                    .knotSurfaceBorder(cornerRadius: 12)
 
                 VStack(alignment: .leading, spacing: 8) {
                     if usePhone {
                         HStack(spacing: 0) {
                             Button(action: { showCountryPicker = true }) {
                                 HStack(spacing: 4) {
-                                    Text(selectedCountry.code).font(.subheadline).foregroundColor(.black)
-                                    Image(systemName: "chevron.down").font(.caption).foregroundColor(.gray)
+                                    Text(selectedCountry.code)
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    Image(systemName: "chevron.down")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
-                                .padding(.horizontal, 12).padding(.vertical, 14)
-                                .background(Color(.systemGray5))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 14)
+                                .background(Color.knotSurface)
                                 .cornerRadius(12, corners: [.topLeft, .bottomLeft])
                             }
+
                             TextField("Phone number", text: $phone)
                                 .keyboardType(.phonePad)
                                 .padding()
-                                .background(Color(.systemGray6))
+                                .background(Color.knotSurface)
                                 .cornerRadius(12, corners: [.topRight, .bottomRight])
                         }
-                        Button("Use email instead") { usePhone = false }
-                            .font(.caption).foregroundColor(.gray)
+                        .knotSurfaceBorder(cornerRadius: 12)
+
+                        Button("Use email instead") {
+                            usePhone = false
+                            errorMessage = nil
+                            successMessage = nil
+                        }
+                        .font(.caption)
+                        .foregroundColor(Color.knotAccent)
                     } else {
-                        TextField("Enter email", text: $email)
+                        TextField("Email", text: $email)
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
                             .padding()
-                            .background(Color(.systemGray6))
+                            .background(Color.knotSurface)
                             .cornerRadius(12)
-                        Button("Use phone number instead") { usePhone = true }
-                            .font(.caption).foregroundColor(.gray)
+                            .knotSurfaceBorder(cornerRadius: 12)
+
+                        Button("Use phone number instead") {
+                            usePhone = true
+                            errorMessage = nil
+                            successMessage = nil
+                        }
+                        .font(.caption)
+                        .foregroundColor(Color.knotAccent)
                     }
                 }
 
-                NavigationLink(destination: VerifyCodeView(contact: contact, onDone: onDone), isActive: $goToVerify) {
-                    EmptyView()
-                }
-
-                Button(action: { goToVerify = true }) {
-                    Text("Send Code")
-                        .fontWeight(.semibold)
-                        .foregroundColor(canContinue ? .white : Color(.systemGray3))
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(canContinue ? Color.black : Color(.systemGray5))
-                        .cornerRadius(12)
-                }
-                .disabled(!canContinue)
-
-                Spacer()
+                PasswordField(label: "New password", text: $newPassword, show: $showPassword)
+                PasswordField(label: "Confirm password", text: $confirmPassword, show: $showPassword)
+                PasswordStrengthIndicator(password: newPassword)
             }
-            .padding(.horizontal, 24)
-            .background(Color.white.ignoresSafeArea())
-            .navigationTitle("Forgot Password")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showCountryPicker) {
-                CountryPickerView(selectedCountry: $selectedCountry, isPresented: $showCountryPicker)
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .multilineTextAlignment(.center)
             }
-        }
-    }
-}
 
-// Step 2: Enter email → Supabase sends the real reset link
-// The OTP-style verify step is removed: Supabase's magic-link / recovery flow
-// handles token validation server-side. The user opens the link from email which
-// deep-links into the app via PasswordResetView (in KnotApp.swift).
-struct VerifyCodeView: View {
-    let contact: String
-    var onDone: () -> Void = {}
+            if let successMessage {
+                Text(successMessage)
+                    .font(.caption)
+                    .foregroundColor(.green)
+                    .multilineTextAlignment(.center)
+            }
 
-    @State private var isLoading  = false
-    @State private var sent       = false
-    @State private var errorMsg   : String? = nil
-
-    var body: some View {
-        VStack(spacing: 28) {
-            Spacer()
-
-            VStack(spacing: 8) {
-                Image(systemName: "envelope.badge.shield.half.filled")
-                    .font(.system(size: 48))
-                    .foregroundColor(.black)
-                Text("Check your \(contact.hasPrefix("+") ? "messages" : "inbox")")
-                    .font(.system(size: 26, weight: .bold))
-                if sent {
-                    Text("A password-reset link has been sent to **\(contact)**. Open the link on this device to set a new password.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
+            Button(action: { Task { await submitReset() } }) {
+                if isLoading {
+                    ProgressView().tint(.white).frame(maxWidth: .infinity)
                 } else {
-                    Text("We'll send a secure reset link to **\(contact)**.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
+                    Text("Reset Password")
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color.knotOnAccent)
+                        .frame(maxWidth: .infinity)
                 }
             }
-
-            if let err = errorMsg {
-                Text(err).font(.caption).foregroundColor(.red).multilineTextAlignment(.center)
-            }
-
-            if sent {
-                Button("Done") { onDone() }
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.black)
-                    .cornerRadius(12)
-            } else {
-                Button(action: { Task { await sendLink() } }) {
-                    if isLoading {
-                        ProgressView().tint(.white).frame(maxWidth: .infinity)
-                    } else {
-                        Text("Send Reset Link")
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                    }
-                }
-                .padding()
-                .background(Color.black)
-                .cornerRadius(12)
-                .disabled(isLoading)
-            }
+            .padding()
+            .background(Color.knotAccent)
+            .cornerRadius(12)
+            .disabled(isLoading)
 
             Spacer()
         }
         .padding(.horizontal, 24)
-        .background(Color.white.ignoresSafeArea())
-        .navigationTitle("Reset Password")
+        .background(Color.knotBackground.ignoresSafeArea())
+        .navigationTitle("Forgot Password")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showCountryPicker) {
+            CountryPickerView(selectedCountry: $selectedCountry, isPresented: $showCountryPicker)
+        }
     }
 
-    private func sendLink() async {
-        isLoading = true
-        errorMsg  = nil
-        defer { isLoading = false }
-        do {
-            // Supabase sends a recovery email; the deep-link opens PasswordResetView
-            // (in KnotApp.swift) which lets the user set a new password.
-            let redirectURL = URL(string: "knot://auth/callback")!
-            if contact.hasPrefix("+") {
-                // Phone: Supabase sends OTP via SMS — wire when phone-reset is supported
-                try await supabase.auth.resetPasswordForEmail(contact, redirectTo: redirectURL)
-            } else {
-                try await supabase.auth.resetPasswordForEmail(contact, redirectTo: redirectURL)
-            }
-            sent = true
-        } catch {
-            errorMsg = "Could not send reset link. Please check the email and try again."
+    @MainActor
+    private func submitReset() async {
+        guard !normalizedName.isEmpty else {
+            errorMessage = "Enter your name."
+            return
         }
+
+        if usePhone {
+            guard isRecoveryPhoneValid(phone, country: selectedCountry) else {
+                errorMessage = selectedCountry.minDigits == selectedCountry.maxDigits
+                    ? "Phone number must be \(selectedCountry.minDigits) digits for \(selectedCountry.name)."
+                    : "Phone number must be \(selectedCountry.minDigits)–\(selectedCountry.maxDigits) digits for \(selectedCountry.name)."
+                return
+            }
+        } else {
+            guard isRecoveryEmailValid(normalizedContact) else {
+                errorMessage = "Enter a valid email address."
+                return
+            }
+        }
+
+        guard let passwordIssue else {
+            guard newPassword == confirmPassword else {
+                errorMessage = "Passwords do not match."
+                return
+            }
+
+            isLoading = true
+            errorMessage = nil
+            successMessage = nil
+            defer { isLoading = false }
+
+            do {
+                try await PasswordRecoveryService.resetPassword(
+                    name: normalizedName,
+                    contact: normalizedContact,
+                    usesPhone: usePhone,
+                    newPassword: newPassword
+                )
+                successMessage = "Password reset completed."
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            return
+        }
+
+        errorMessage = passwordIssue
     }
 }
 
-// Step 3 (legacy UI stub — real reset handled by PasswordResetView in KnotApp.swift
-// when the user opens the recovery deep-link on this device)
-struct ResetPasswordView: View {
-    var onDone: () -> Void = {}
+// MARK: - Apple Sign-In Button
+//
+// Native iOS Sign in with Apple button. Wraps SwiftUI's SignInWithAppleButton
+// and hands the result to AuthManager which does the Supabase JWT exchange.
+//
+// Apple App Store Review Guideline 4.8 requires this whenever the app offers
+// a third-party social login (Google in our case). It must be at least as
+// prominent as the other social options.
+struct AppleSignInButton: View {
+    @EnvironmentObject var authManager: AuthManager
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            Image(systemName: "envelope.open.fill")
-                .font(.system(size: 56))
-                .foregroundColor(.black)
-            Text("Check your email")
-                .font(.system(size: 28, weight: .bold))
-            Text("Open the reset link in the email on this device. The app will guide you through setting a new password.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            Button("Done") { onDone() }
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.black)
-                .cornerRadius(12)
-                .padding(.horizontal)
-            Spacer()
-        }
-        .background(Color.white.ignoresSafeArea())
-        .navigationTitle("Reset Password")
-        .navigationBarTitleDisplayMode(.inline)
+        SignInWithAppleButton(.continue,
+            onRequest: { request in
+                request.requestedScopes = [.fullName, .email]
+                request.nonce = authManager.makeNonceForAppleRequest()
+            },
+            onCompletion: { result in
+                switch result {
+                case .success(let authorization):
+                    Task { await authManager.handleAppleAuthorization(authorization) }
+                case .failure(let error):
+                    let nsError = error as NSError
+                    if nsError.code == ASAuthorizationError.canceled.rawValue { return }
+                    print("[AppleSignIn] error: \(error)")
+                }
+            }
+        )
+        // Match the Google button alongside us: filled-black in light, filled-white in dark.
+        // Apple HIG permits .black or .white — both are official styles.
+        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+        .frame(height: 52)
+        .cornerRadius(12)
+        .id(colorScheme)   // force recreation when scheme changes so style updates
     }
 }
 

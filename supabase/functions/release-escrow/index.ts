@@ -89,14 +89,14 @@ serve(async (req) => {
     }
 
     const { data: sellerProfile } = await supabaseAdmin
-      .from("profiles").select("stripe_customer_id").eq("id", order.seller_id).single();
+      .from("profiles").select("stripe_connect_id").eq("id", order.seller_id).single();
 
     let transferId: string | undefined;
-    if (sellerProfile?.stripe_customer_id) {
+    if (sellerProfile?.stripe_connect_id) {
       const transfer = await stripe.transfers.create({
         amount:      order.payout_cents,
         currency:    "sgd",
-        destination: sellerProfile.stripe_customer_id,
+        destination: sellerProfile.stripe_connect_id,
         metadata:    { order_id: orderId },
       });
       transferId = transfer.id;

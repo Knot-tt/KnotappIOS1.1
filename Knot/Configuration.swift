@@ -8,6 +8,7 @@
 import Foundation
 
 enum Configuration {
-    static let supabaseURL     = "https://flwwgpgqoqntpdxygknj.supabase.co"
-    static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsd3dncGdxb3FudHBkeHlna25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDk1ODIsImV4cCI6MjA5MTUyNTU4Mn0.rwNcUGECCvuyvbH-1htToRw8Y1RRHudUHdwWli-tiBg"
+    static let supabaseURL          = "https://flwwgpgqoqntpdxygknj.supabase.co"
+    static let supabaseAnonKey      = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsd3dncGdxb3FudHBkeHlna25qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDk1ODIsImV4cCI6MjA5MTUyNTU4Mn0.rwNcUGECCvuyvbH-1htToRw8Y1RRHudUHdwWli-tiBg"
+    static let stripePublishableKey = "pk_test_51TeT1hHCGBV9qjrsba9vk1WH2nkgYFseeyLfsNZ6Hm1XXPezoxwhDpbKzChNxdBE3VUajEbYEQEdwK1MwWeCT7fb00LvfhJddm"
 }

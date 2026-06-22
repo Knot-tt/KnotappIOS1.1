@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 import UIKit
 
 // MARK: - Listing Type
@@ -112,6 +111,10 @@ struct ShopListing: Identifiable {
     var price       : Int           = 0
     var sellerName  : String        = ""
     var sellerID    : UUID?         = nil
+    var isActive    : Bool          = true  // false = soft-deleted; only visible in "My Listings"
+    var isRecurring : Bool          = false // true = stays listed after a sale; false = removed when sold
+    var acceptsCash : Bool          = true
+    var acceptsCard : Bool          = false
     var images      : [UIImage]     = []   // locally selected (before upload)
     var imageURLs   : [String]      = []   // Supabase Storage public URLs
     var date        : Date          = Date()
@@ -138,21 +141,20 @@ enum ShopFilter: String, CaseIterable {
 // MARK: - Shop View
 struct ShopView: View {
     @Environment(UserProfile.self) var profile
-    @State private var searchText      = ""
-    @State private var filter          : ShopFilter   = .all
-    @State private var selectedListing : ShopListing? = nil
-    @State private var showCreate      = false
-    @State private var showWallet      = false
-    @State private var showOrders      = false
+    @State private var searchText           = ""
+    @State private var filter               : ShopFilter   = .all
+    @State private var selectedListing      : ShopListing? = nil
+    @State private var showCreate           = false
+    @State private var showOrders           = false
 
     var displayed: [ShopListing] {
         var base: [ShopListing]
         if filter == .myListings {
             base = profile.myListings
         } else if let type = filter.listingType {
-            base = profile.allListings.filter { $0.type == type }
+            base = profile.allListings.filter { $0.type == type && $0.isActive }
         } else {
-            base = profile.allListings
+            base = profile.allListings.filter { $0.isActive }
         }
         if !searchText.isEmpty {
             base = base.filter {
@@ -182,10 +184,10 @@ struct ShopView: View {
                         HStack(spacing: 6) {
                             Text("Hub")
                                 .font(.system(size: 34, weight: .bold))
-                                .foregroundColor(.black)
+                                .foregroundColor(.primary)
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(.systemGray))
+                                .foregroundColor(Color.knotMuted)
                         }
                     }
                     Spacer()
@@ -204,18 +206,20 @@ struct ShopView: View {
                                     .clipShape(Capsule())
                             }
                         }
-                        .foregroundColor(.black)
+                        .foregroundColor(.primary)
                         .padding(.horizontal, 12).padding(.vertical, 7)
-                        .background(Color(.systemGray6))
+                        .background(Color.knotSurface)
                         .cornerRadius(20)
+                        .overlay(Capsule().stroke(Color(.separator), lineWidth: 1))
                     }
                     Button(action: { showCreate = true }) {
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.black)
+                            .foregroundColor(.primary)
                             .padding(8)
-                            .background(Color(.systemGray6))
+                            .background(Color.knotSurface)
                             .clipShape(Circle())
+                            .overlay(Circle().stroke(Color(.separator), lineWidth: 1))
                     }
                 }
             }
@@ -223,66 +227,82 @@ struct ShopView: View {
             .padding(.top, 16)
             .padding(.bottom, 6)
 
-            // Active filter pill
-            if filter != .all {
-                HStack {
-                    let pillIcon = filter.listingType?.icon ?? (filter == .myListings ? "person.fill" : "line.3.horizontal.decrease")
-                    Label(filter.rawValue, systemImage: pillIcon)
-                        .font(.caption).fontWeight(.medium).foregroundColor(.white)
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(Color.black).cornerRadius(10)
-                    Spacer()
-                }
-                .padding(.horizontal).padding(.bottom, 4)
-            }
-
-            // ── Search ────────────────────────────────────────────────────
-            HStack {
-                Image(systemName: "magnifyingglass").foregroundColor(.gray)
-                TextField("Search items, services, ads…", text: $searchText)
-                    .autocorrectionDisabled()
-                if !searchText.isEmpty {
-                    Button(action: { searchText = "" }) {
-                        Image(systemName: "xmark.circle.fill").foregroundColor(Color(.systemGray3))
+            // ── Scrollable content ────────────────────────────────────────
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Active filter pill
+                    if filter != .all {
+                        HStack {
+                            let pillIcon = filter.listingType?.icon ?? (filter == .myListings ? "person.fill" : "line.3.horizontal.decrease")
+                            Label(filter.rawValue, systemImage: pillIcon)
+                                .font(.caption).fontWeight(.medium).foregroundColor(Color.knotOnAccent)
+                                .padding(.horizontal, 10).padding(.vertical, 5)
+                                .background(Color.knotAccent).cornerRadius(10)
+                            Spacer()
+                        }
+                        .padding(.horizontal).padding(.top, 8).padding(.bottom, 4)
                     }
-                }
-            }
-            .padding(10)
-            .background(Color(.systemGray6))
-            .cornerRadius(12)
-            .padding(.horizontal)
-            .padding(.bottom, 10)
 
-            Divider()
-
-            // ── Grid ──────────────────────────────────────────────────────
-            if displayed.isEmpty {
-                Spacer()
-                VStack(spacing: 12) {
-                    Image(systemName: "cart")
-                        .font(.system(size: 48)).foregroundColor(Color(.systemGray3))
-                    Text("Nothing here yet")
-                        .font(.headline).foregroundColor(Color(.systemGray))
-                    Text("Tap + to list an item, service, or advertisement")
-                        .font(.caption).foregroundColor(Color(.systemGray3))
-                        .multilineTextAlignment(.center).padding(.horizontal, 40)
-                }
-                Spacer()
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
-                        ForEach(displayed) { listing in
-                            ShopItemCard(listing: listing,
-                                         isMine: profile.myListings.contains(where: { $0.id == listing.id })) { selectedListing = listing }
+                    // Search bar
+                    HStack {
+                        Image(systemName: "magnifyingglass").foregroundColor(.secondary)
+                        TextField("Search items, services, ads…", text: $searchText)
+                            .autocorrectionDisabled()
+                        if !searchText.isEmpty {
+                            Button(action: { searchText = "" }) {
+                                Image(systemName: "xmark.circle.fill").foregroundColor(Color.knotMuted)
+                            }
                         }
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.top, 12)
-                    .padding(.bottom, 100)
+                    .padding(10)
+                    .background(Color.knotWell)
+                    .cornerRadius(12)
+                    .knotSurfaceBorder(cornerRadius: 12)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    .padding(.bottom, 10)
+
+
+                    Divider()
+
+                    if displayed.isEmpty && !profile.hasLoadedListings {
+                        // First load still in flight — spinner, not "nothing here".
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 80)
+                    } else if displayed.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "cart")
+                                .font(.system(size: 48)).foregroundColor(Color.knotMuted)
+                            Text("Nothing here yet")
+                                .font(.headline).foregroundColor(Color.knotMuted)
+                            Text("Tap + to list an item, service, or advertisement")
+                                .font(.caption).foregroundColor(Color.knotMuted)
+                                .multilineTextAlignment(.center).padding(.horizontal, 40)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 80)
+                    } else {
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+                            ForEach(displayed) { listing in
+                                ShopItemCard(listing: listing,
+                                             isMine: profile.myListings.contains(where: { $0.id == listing.id })) { selectedListing = listing }
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.top, 12)
+                        .padding(.bottom, 100)
+                    }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
         }
-        .background(Color(.systemGray6).ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
+        .task { await profile.loadListings() }
+        .onAppear { openPendingOrdersIfNeeded() }
+        .onChange(of: profile.pendingOrderNotificationID) { _, _ in
+            openPendingOrdersIfNeeded()
+        }
         .sheet(item: $selectedListing) { listing in
             ShopItemDetailView(listing: listing).environment(profile)
         }
@@ -294,10 +314,14 @@ struct ShopView: View {
                 MyOrdersView().environment(profile)
             }
         }
-        .sheet(isPresented: $showWallet) {
-            NavigationStack { WalletPaymentsView() }
-        }
     }
+
+    private func openPendingOrdersIfNeeded() {
+        guard profile.pendingOrderNotificationID != nil else { return }
+        profile.pendingOrderNotificationID = nil
+        showOrders = true
+    }
+
 }
 
 // MARK: - Shop Item Card
@@ -312,7 +336,7 @@ struct ShopItemCard: View {
                 // Image area
                 ZStack {
                     Rectangle()
-                        .fill(Color(.systemGray5))
+                        .fill(Color.knotSurface)
                         .frame(height: 110)
                     if let img = listing.images.first {
                         Image(uiImage: img)
@@ -326,22 +350,23 @@ struct ShopItemCard: View {
                                 img.resizable().scaledToFill()
                                     .frame(height: 110).clipped()
                             } else {
-                                Color(.systemGray5).frame(height: 110)
+                                Color.knotSurface.frame(height: 110)
                             }
                         }
                     } else {
                         Image(systemName: listing.type.icon)
                             .font(.system(size: 36))
-                            .foregroundColor(Color(.systemGray3))
+                            .foregroundColor(Color.knotMuted)
                     }
                     // Type badge (top-left, for ads and services)
                     if listing.type == .advertisement || listing.type == .service {
                         VStack {
                             HStack {
                                 Text(listing.type == .advertisement ? "Ad" : "Service")
-                                    .font(.caption2).fontWeight(.semibold).foregroundColor(.white)
+                                    .font(.caption2).fontWeight(.semibold)
+                                    .foregroundColor(listing.type == .advertisement ? .white : Color.knotOnAccent)
                                     .padding(.horizontal, 6).padding(.vertical, 3)
-                                    .background(listing.type == .advertisement ? Color.orange : Color.blue)
+                                    .background(listing.type == .advertisement ? Color.orange : Color.knotAccent)
                                     .cornerRadius(6)
                                     .padding(6)
                                 Spacer()
@@ -349,15 +374,16 @@ struct ShopItemCard: View {
                             Spacer()
                         }
                     }
-                    // Condition badge (bottom-left, items only)
+                    // Condition badge (bottom-left, items only). White-on-dark-scrim works
+                    // on every background — light, dark, or photo content.
                     if listing.type == .item {
                         VStack {
                             Spacer()
                             HStack {
                                 Text(listing.condition.rawValue)
-                                    .font(.caption2).fontWeight(.medium).foregroundColor(.white)
+                                    .font(.caption2).fontWeight(.semibold).foregroundColor(.white)
                                     .padding(.horizontal, 6).padding(.vertical, 3)
-                                    .background(Color.black.opacity(0.55))
+                                    .background(Color.black.opacity(0.65))
                                     .cornerRadius(6)
                                     .padding(6)
                                 Spacer()
@@ -368,12 +394,16 @@ struct ShopItemCard: View {
                 .frame(height: 110)
                 .clipped()
 
+                Rectangle()
+                    .fill(Color.knotBorder)
+                    .frame(height: 1.5)
+
                 // Info
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(spacing: 4) {
                     HStack(spacing: 4) {
                         Text(listing.name)
                             .font(.subheadline).fontWeight(.semibold)
-                            .foregroundColor(.black)
+                            .foregroundColor(.primary)
                             .lineLimit(1)
                         if isMine {
                             Image(systemName: "checkmark.circle.fill")
@@ -383,22 +413,20 @@ struct ShopItemCard: View {
                     }
 
                     if listing.price > 0 {
-                        HStack(spacing: 3) {
-                            KnotIcon(size: 11)
-                            Text(listing.price == 0 ? "Free" : "$\(listing.price)")
-                                .font(.caption).foregroundColor(.black)
-                        }
+                        Text("$\(listing.price)")
+                            .font(.caption).fontWeight(.semibold).foregroundColor(.primary)
                     } else {
                         Text("Free")
                             .font(.caption).foregroundColor(.green).fontWeight(.semibold)
                     }
                 }
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white)
+                .padding(.horizontal, 8)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(Color.knotSurface)
             }
             .cornerRadius(14)
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(.systemGray4), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.knotBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
@@ -413,6 +441,7 @@ struct ShopItemDetailView: View {
     @State private var showDeleteAlert = false
     @State private var confirmDelete   = false
     @State private var showOrderSheet  = false
+    @State private var showEditSheet   = false
 
     var isMine: Bool { listing.sellerID == profile.currentUserID }
 
@@ -449,7 +478,7 @@ struct ShopItemDetailView: View {
                                             img.resizable().scaledToFill()
                                                 .frame(height: 260).clipped()
                                         } else {
-                                            Color(.systemGray5).frame(height: 260)
+                                            Color.knotSurface.frame(height: 260)
                                         }
                                     }
                                 }
@@ -459,45 +488,44 @@ struct ShopItemDetailView: View {
                         .frame(height: 260)
                     } else {
                         ZStack {
-                            Rectangle().fill(Color(.systemGray5)).frame(height: 220)
+                            Rectangle().fill(Color.knotSurface).frame(height: 220)
                             Image(systemName: listing.type.icon)
-                                .font(.system(size: 64)).foregroundColor(Color(.systemGray3))
+                                .font(.system(size: 64)).foregroundColor(Color.knotMuted)
                         }
                     }
 
                     VStack(alignment: .leading, spacing: 16) {
                         // Badges row
                         HStack(spacing: 8) {
-                            let typeBadgeColor: Color = listing.type == .item ? .black : listing.type == .service ? .blue : .orange
+                            let isAccentBadge = listing.type == .item || listing.type == .service
+                            let typeBadgeColor: Color = isAccentBadge ? Color.knotAccent : .orange
                             Label(listing.type.rawValue, systemImage: listing.type.icon)
-                                .font(.caption).fontWeight(.semibold).foregroundColor(.white)
+                                .font(.caption).fontWeight(.semibold)
+                                .foregroundColor(isAccentBadge ? Color.knotOnAccent : .white)
                                 .padding(.horizontal, 10).padding(.vertical, 4)
                                 .background(typeBadgeColor)
                                 .cornerRadius(8)
                             Text(listing.category.rawValue)
-                                .font(.caption).fontWeight(.medium).foregroundColor(.black)
+                                .font(.caption).fontWeight(.medium).foregroundColor(.primary)
                                 .padding(.horizontal, 10).padding(.vertical, 4)
-                                .background(Color(.systemGray5))
+                                .background(Color.knotSurface)
                                 .cornerRadius(8)
                             if listing.type == .item {
                                 Text(listing.condition.rawValue)
-                                    .font(.caption).fontWeight(.medium).foregroundColor(.black)
+                                    .font(.caption).fontWeight(.medium).foregroundColor(.primary)
                                     .padding(.horizontal, 10).padding(.vertical, 4)
-                                    .background(Color(.systemGray5))
+                                    .background(Color.knotSurface)
                                     .cornerRadius(8)
                             }
                         }
 
                         // Name + price
                         Text(listing.name)
-                            .font(.system(size: 22, weight: .bold)).foregroundColor(.black)
+                            .font(.system(size: 22, weight: .bold)).foregroundColor(.primary)
 
                         if listing.price > 0 {
-                            HStack(spacing: 4) {
-                                KnotIcon(size: 16)
-                                Text(listing.price == 0 ? "Free" : "$\(listing.price)")
-                                    .font(.system(size: 18, weight: .semibold)).foregroundColor(.black)
-                            }
+                            Text("$\(listing.price)")
+                                .font(.system(size: 18, weight: .semibold)).foregroundColor(.primary)
                         } else {
                             Text("Free")
                                 .font(.system(size: 18, weight: .semibold)).foregroundColor(.green)
@@ -508,24 +536,41 @@ struct ShopItemDetailView: View {
                         // Seller
                         HStack(spacing: 10) {
                             ZStack {
-                                Circle().fill(Color.black).frame(width: 36, height: 36)
+                                Circle().fill(Color.knotAccent).frame(width: 36, height: 36)
                                 Text(String(listing.sellerName.prefix(1)).uppercased())
-                                    .font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
+                                    .font(.system(size: 14, weight: .semibold)).foregroundColor(Color.knotOnAccent)
                             }
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(listing.sellerName).font(.subheadline).fontWeight(.semibold)
-                                Text("Seller").font(.caption).foregroundColor(.gray)
+                                Text("Seller").font(.caption).foregroundColor(.secondary)
                             }
                             Spacer()
                             if !isMine {
                                 Button(action: {
-                                    profile.openConversation(with: listing.sellerName)
+                                    // Prefer the UUID-based path — listing already carries
+                                    // sellerID, no need for a fragile name search.
+                                    if let sid = listing.sellerID {
+                                        profile.openConversation(withUserID: sid,
+                                                                 name: listing.sellerName,
+                                                                 listingContext: ListingMessageContext(
+                                                                    listingID: listing.id,
+                                                                    listingName: listing.name
+                                                                 ))
+                                    } else {
+                                        profile.openConversation(
+                                            with: listing.sellerName,
+                                            listingContext: ListingMessageContext(
+                                                listingID: listing.id,
+                                                listingName: listing.name
+                                            )
+                                        )
+                                    }
                                     dismiss()
                                 }) {
                                     Text("Message")
-                                        .font(.caption).fontWeight(.semibold).foregroundColor(.white)
+                                        .font(.caption).fontWeight(.semibold).foregroundColor(Color.knotOnAccent)
                                         .padding(.horizontal, 14).padding(.vertical, 7)
-                                        .background(Color.black).clipShape(Capsule())
+                                        .background(Color.knotAccent).clipShape(Capsule())
                                 }
                             }
                         }
@@ -533,10 +578,10 @@ struct ShopItemDetailView: View {
                         // Condition detail (items only)
                         if listing.type == .item {
                             HStack(spacing: 10) {
-                                Image(systemName: "info.circle").foregroundColor(.gray)
+                                Image(systemName: "info.circle").foregroundColor(.secondary)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(listing.condition.rawValue).font(.caption).fontWeight(.semibold)
-                                    Text(listing.condition.description).font(.caption).foregroundColor(.gray)
+                                    Text(listing.condition.description).font(.caption).foregroundColor(.secondary)
                                 }
                             }
                         }
@@ -545,9 +590,9 @@ struct ShopItemDetailView: View {
 
                         // Description
                         Text("Description")
-                            .font(.headline).foregroundColor(.black)
+                            .font(.headline).foregroundColor(.primary)
                         Text(listing.description)
-                            .font(.body).foregroundColor(.black.opacity(0.8)).lineSpacing(5)
+                            .font(.body).foregroundColor(.primary.opacity(0.8)).lineSpacing(5)
                         if !listing.link.isEmpty {
                             Link(destination: URL(string: listing.link.hasPrefix("http") ? listing.link : "https://\(listing.link)") ?? URL(string: "https://")!) {
                                 HStack(spacing: 6) {
@@ -573,8 +618,15 @@ struct ShopItemDetailView: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     if isMine {
-                        Button(role: .destructive, action: { showDeleteAlert = true }) {
-                            Image(systemName: "trash")
+                        Menu {
+                            Button(action: { showEditSheet = true }) {
+                                Label("Edit Listing", systemImage: "pencil")
+                            }
+                            Button(role: .destructive, action: { showDeleteAlert = true }) {
+                                Label("Delete Listing", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
                         }
                     } else if existingOrder != nil {
                         Button(action: { showOrderSheet = true }) {
@@ -593,9 +645,9 @@ struct ShopItemDetailView: View {
                         Button(action: { showPurchase = true }) {
                             Text("Buy")
                                 .fontWeight(.semibold)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.knotOnAccent)
                                 .padding(.horizontal, 16).padding(.vertical, 6)
-                                .background(Color.black)
+                                .background(Color.knotAccent)
                                 .clipShape(Capsule())
                         }
                     }
@@ -618,6 +670,9 @@ struct ShopItemDetailView: View {
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("This listing will be removed from the Hub.")
+            }
+            .sheet(isPresented: $showEditSheet) {
+                EditListingView(listing: listing).environment(profile)
             }
             .onChange(of: confirmDelete) { _, confirmed in
                 guard confirmed else { return }
@@ -643,9 +698,15 @@ struct CreateListingView: View {
     @State private var description   = ""
     @State private var link          = ""
     @State private var priceText     = ""
-    @State private var selectedPhotos: [PhotosPickerItem] = []
-    @State private var images        : [UIImage]          = []
-    @State private var isPosting     = false
+    @State private var showPhotoPicker = false
+    @State private var showImageSourceChoice = false
+    @State private var showCamera      = false
+    @State private var images          : [UIImage] = []
+    @State private var isPosting        = false
+    @State private var createError      : String? = nil
+    @State private var isRecurring      = false
+    /// Only items/services can be priced — ads are always free.
+    private var isSellableType: Bool { type == .item || type == .service }
 
     private var canCreate: Bool {
         !isPosting &&
@@ -674,13 +735,14 @@ struct CreateListingView: View {
                     }
                 }
 
+
                 // Details
                 Section {
                     TextField("Name", text: $name)
                     TextField("Description", text: $description, axis: .vertical)
                         .lineLimit(3...6)
                     HStack(spacing: 8) {
-                        Image(systemName: "link").foregroundColor(Color(.systemGray3)).font(.subheadline)
+                        Image(systemName: "link").foregroundColor(Color.knotMuted).font(.subheadline)
                         TextField("Link (optional)", text: $link)
                             .keyboardType(.URL)
                             .autocapitalization(.none)
@@ -688,42 +750,25 @@ struct CreateListingView: View {
                     }
                     if type == .item || type == .service {
                         HStack {
-                            KnotIcon(size: 14)
-                            TextField("Price in $ (0 for free)", text: $priceText)
+                            Text("$").foregroundColor(.secondary)
+                            TextField("Price (0 for free)", text: $priceText)
                                 .keyboardType(.numberPad)
                         }
+                    }
+                    if type == .item || type == .service {
+                        Toggle("Recurring listing", isOn: $isRecurring)
                     }
                 } header: {
                     Text("Details")
                 } footer: {
-                    if (type == .item || type == .service), let price = Int(priceText), price > 0 {
-                        let subtotal = price * 100
-                        let fee = Int(Double(subtotal) * 0.10)
-                        let payout = subtotal - fee
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text("Listing price")
-                                Spacer()
-                                Text(formatSGD(subtotal))
-                            }
-                            HStack {
-                                Text("Knot fee (10%)")
-                                    .foregroundColor(Color(.systemOrange))
-                                Spacer()
-                                Text("−" + formatSGD(fee))
-                                    .foregroundColor(Color(.systemOrange))
-                            }
-                            Divider()
-                            HStack {
-                                Text("You receive").fontWeight(.semibold)
-                                Spacer()
-                                Text(formatSGD(payout))
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(Color(.systemGreen))
-                            }
-                        }
-                        .font(.caption)
-                        .padding(.vertical, 4)
+                    if isRecurring {
+                        Text("Recurring listings stay visible after each sale — great for services or items you sell repeatedly.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else if type == .item || type == .service {
+                        Text("This listing will be automatically removed from the Hub once it's sold.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
 
@@ -734,6 +779,7 @@ struct CreateListingView: View {
                             Text(c.rawValue).tag(c)
                         }
                     }
+                    .pickerStyle(.menu)
                 }
 
                 // Condition (items only)
@@ -741,35 +787,23 @@ struct CreateListingView: View {
                     Section {
                         Picker("Condition", selection: $condition) {
                             ForEach(ItemCondition.allCases) { c in
-                                VStack(alignment: .leading) {
-                                    Text(c.rawValue)
-                                }.tag(c)
+                                Text(c.rawValue).tag(c)
                             }
                         }
-                        // Description of selected condition
+                        .pickerStyle(.menu)
                         HStack(spacing: 8) {
-                            Image(systemName: "info.circle").foregroundColor(.gray).font(.caption)
-                            Text(condition.description).font(.caption).foregroundColor(.gray)
+                            Image(systemName: "info.circle").foregroundColor(.secondary).font(.caption)
+                            Text(condition.description).font(.caption).foregroundColor(.secondary)
                         }
                     } header: { Text("Condition") }
                 }
 
-                // Photos
                 Section("Photos") {
-                    PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 6, matching: .images) {
+                    Button(action: {
+                        if CameraPicker.isAvailable { showImageSourceChoice = true }
+                        else { showPhotoPicker = true }
+                    }) {
                         Label("Add Photos", systemImage: "photo.on.rectangle.angled")
-                    }
-                    .onChange(of: selectedPhotos) { _, items in
-                        Task {
-                            var loaded: [UIImage] = []
-                            for item in items {
-                                if let data = try? await item.loadTransferable(type: Data.self),
-                                   let img = UIImage(data: data) {
-                                    loaded.append(img)
-                                }
-                            }
-                            await MainActor.run { images = loaded }
-                        }
                     }
                     if !images.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -786,6 +820,7 @@ struct CreateListingView: View {
                     }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("New Listing")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -796,25 +831,197 @@ struct CreateListingView: View {
                         isPosting = true
                         Task {
                             await createListing()
-                            dismiss()
                         }
                     }
                     .fontWeight(.semibold)
                     .disabled(!canCreate)
                 }
             }
+            .confirmationDialog("Add Photos", isPresented: $showImageSourceChoice, titleVisibility: .visible) {
+                Button("Take Photo") { showCamera = true }
+                Button("Choose from Library") { showPhotoPicker = true }
+                Button("Cancel", role: .cancel) {}
+            }
+            .sheet(isPresented: $showPhotoPicker) {
+                MultiImagePicker(maxSelectionCount: 6) { imgs in
+                    showPhotoPicker = false
+                    if !imgs.isEmpty {
+                        images = imgs
+                    }
+                }
+            }
+            .sheet(isPresented: $showCamera) {
+                // Camera adds a single shot; keep the same 6-photo cap as the library.
+                CameraPicker { img in
+                    if images.count < 6 { images.append(img) }
+                }
+            }
+            .alert("Couldn't Save Listing", isPresented: Binding(
+                get: { createError != nil },
+                set: { if !$0 { createError = nil } }
+            )) {
+                Button("OK", role: .cancel) { createError = nil }
+            } message: {
+                Text(createError ?? "")
+            }
         }
     }
 
     private func createListing() async {
         let price = Int(priceText) ?? 0
-        await profile.createListing(
-            type: type, category: category, condition: condition,
-            name: name.trimmingCharacters(in: .whitespaces),
+        defer { isPosting = false }
+        do {
+            try await profile.createListing(
+                type: type, category: category, condition: condition,
+                name: name.trimmingCharacters(in: .whitespaces),
+                description: description.trimmingCharacters(in: .whitespaces),
+                link: link.trimmingCharacters(in: .whitespaces),
+                price: type == .advertisement ? 0 : price,
+                images: images,
+                isRecurring: isRecurring,
+                acceptsCash: type != .advertisement,
+                acceptsCard: false
+            )
+            images.removeAll(keepingCapacity: false)
+            dismiss()
+            // The newly created listing is already inserted into local state by
+            // UserProfile.createListing(). Refresh in the background so a slow or
+            // stuck fetch cannot block sheet dismissal and make "Post" feel frozen.
+            Task { await profile.loadListings() }
+        } catch {
+            createError = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Edit Listing View
+struct EditListingView: View {
+    @Environment(UserProfile.self) var profile
+    @Environment(\.dismiss) var dismiss
+
+    let listing: ShopListing
+
+    @State private var type        : ListingType
+    @State private var category    : ShopCategory
+    @State private var condition   : ItemCondition
+    @State private var name        : String
+    @State private var description : String
+    @State private var link        : String
+    @State private var priceText   : String
+    @State private var isSaving    = false
+
+    init(listing: ShopListing) {
+        self.listing      = listing
+        _type        = State(initialValue: listing.type)
+        _category    = State(initialValue: listing.category)
+        _condition   = State(initialValue: listing.condition)
+        _name        = State(initialValue: listing.name)
+        _description = State(initialValue: listing.description)
+        _link        = State(initialValue: listing.link)
+        _priceText   = State(initialValue: listing.price > 0 ? String(listing.price) : "")
+    }
+
+    private var canSave: Bool {
+        !isSaving &&
+        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        !description.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("Type", selection: $type) {
+                        ForEach(ListingType.allCases) { t in
+                            Label(t.rawValue, systemImage: t.icon).tag(t)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } header: { Text("Listing Type") }
+
+                Section {
+                    TextField("Name", text: $name)
+                    TextField("Description", text: $description, axis: .vertical)
+                        .lineLimit(3...6)
+                    HStack(spacing: 8) {
+                        Image(systemName: "link").foregroundColor(Color.knotMuted).font(.subheadline)
+                        TextField("Link (optional)", text: $link)
+                            .keyboardType(.URL)
+                            .autocapitalization(.none)
+                            .autocorrectionDisabled()
+                    }
+                    if type == .item || type == .service {
+                        HStack {
+                            Text("$").foregroundColor(.secondary)
+                            TextField("Price (0 for free)", text: $priceText)
+                                .keyboardType(.numberPad)
+                        }
+                    }
+                } header: { Text("Details") }
+
+                Section("Category") {
+                    Picker("Category", selection: $category) {
+                        ForEach(ShopCategory.allCases) { c in
+                            Text(c.rawValue).tag(c)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+
+                if type == .item {
+                    Section {
+                        Picker("Condition", selection: $condition) {
+                            ForEach(ItemCondition.allCases) { c in
+                                Text(c.rawValue).tag(c)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle").foregroundColor(.secondary).font(.caption)
+                            Text(condition.description).font(.caption).foregroundColor(.secondary)
+                        }
+                    } header: { Text("Condition") }
+                }
+
+                Section {
+                    Text("Photos can't be changed from this screen. To swap photos, delete and re-create the listing.")
+                        .font(.caption).foregroundColor(.secondary)
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle("Edit Listing")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(action: { Task { await save() } }) {
+                        if isSaving { ProgressView() }
+                        else { Text("Save").fontWeight(.semibold) }
+                    }
+                    .disabled(!canSave)
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func save() async {
+        guard canSave else { return }
+        isSaving = true
+        defer { isSaving = false }
+        let price = Int(priceText) ?? 0
+        await profile.updateListing(
+            listingID  : listing.id,
+            type       : type,
+            category   : category,
+            condition  : condition,
+            name       : name.trimmingCharacters(in: .whitespaces),
             description: description.trimmingCharacters(in: .whitespaces),
-            link: link.trimmingCharacters(in: .whitespaces),
-            price: type == .advertisement ? 0 : price,
-            images: images
+            link       : link.trimmingCharacters(in: .whitespaces),
+            price      : type == .advertisement ? 0 : price
         )
+        dismiss()
     }
 }

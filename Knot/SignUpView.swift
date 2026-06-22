@@ -6,61 +6,56 @@ struct SignUpView: View {
     @EnvironmentObject var authManager: AuthManager
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
+        VStack(spacing: 20) {
 
-                Spacer()
+            Spacer()
 
-                // Header
-                Text("Create your Knot account")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.black)
-                    .multilineTextAlignment(.center)
+            // Header
+            Text("Create your Knot account")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.center)
 
-                Spacer().frame(height: 8)
+            Spacer().frame(height: 8)
 
-                // Social Sign Up Buttons
-                VStack(spacing: 12) {
-                    SocialLoginButton(label: "Continue with Google", icon: "globe") {
-                        Task { await authManager.signInWithGoogle() }
-                    }
-                    SocialLoginButton(label: "Continue with Apple", icon: "apple.logo") {
-                        Task { await authManager.signInWithApple() }
-                    }
-
+            // Social Sign Up Buttons — Apple first per HIG / Guideline 4.8.
+            VStack(spacing: 12) {
+                AppleSignInButton()
+                SocialLoginButton(label: "Continue with Google", icon: "globe") {
+                    Task { await authManager.signInWithGoogle() }
                 }
-                if let err = authManager.socialAuthError {
-                    Text(err)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.center)
-                }
-
-                // Divider
-                HStack {
-                    Rectangle().frame(height: 1).foregroundColor(Color(.systemGray4))
-                    Text("or").foregroundColor(.gray).font(.footnote)
-                    Rectangle().frame(height: 1).foregroundColor(Color(.systemGray4))
-                }
-
-                // Create Account Button
-                NavigationLink(destination: CreateAccountView()) {
-                    Text("Create Account")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.black)
-                        .cornerRadius(12)
-                }
-
-                Spacer()
             }
-            .padding(.horizontal, 24)
-            .background(Color.white.ignoresSafeArea())
-            .navigationTitle("Sign Up")
-            .navigationBarTitleDisplayMode(.inline)
+            if let err = authManager.socialAuthError {
+                Text(err)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .multilineTextAlignment(.center)
+            }
+
+            // Divider
+            HStack {
+                Rectangle().frame(height: 1).foregroundColor(Color.knotBorder)
+                Text("or").foregroundColor(.secondary).font(.footnote)
+                Rectangle().frame(height: 1).foregroundColor(Color.knotBorder)
+            }
+
+            // Create Account Button
+            NavigationLink(destination: CreateAccountView()) {
+                Text("Create Account")
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color.knotOnAccent)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.knotAccent)
+                    .cornerRadius(12)
+            }
+
+            Spacer()
         }
+        .padding(.horizontal, 24)
+        .background(Color.knotBackground.ignoresSafeArea())
+        .navigationTitle("Sign Up")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -77,6 +72,9 @@ struct CreateAccountView: View {
     @State private var showCountryPicker = false
     @State private var showPassword = false
     @State private var showVerifyPassword = false
+    @State private var agreedToTerms = false
+    @State private var showTermsSheet = false
+    @State private var showPrivacySheet = false
 
     // Error states
     @State private var emailError = ""
@@ -161,9 +159,15 @@ struct CreateAccountView: View {
         do {
             let trimmedName = name.trimmingCharacters(in: .whitespaces)
             if usePhone {
-                let response = try await supabase.auth.signUp(phone: identifier, password: password, data: ["name": .string(trimmedName)])
-                print("[SignUp] phone sign up succeeded for user: \(response.user.id)")
-                navigateToOTP = true
+                // Phone accounts have NO SMS/OTP — the number is just an identifier.
+                // The edge function creates an auto-confirmed account; we then sign
+                // in and go straight to onboarding (no verification screen).
+                let internalEmail = try await authManager.phoneSignUp(
+                    e164Phone: identifier, password: password, name: trimmedName
+                )
+                try await supabase.auth.signIn(email: internalEmail, password: password)
+                print("[SignUp] phone sign up succeeded")
+                navigateToBirthday = true
             } else {
                 try await supabase.auth.signUp(email: identifier, password: password, data: ["name": .string(trimmedName)])
                 // KnotApp takes over: EmailVerificationGateView shown, then OnboardingFlowView after verification
@@ -171,42 +175,14 @@ struct CreateAccountView: View {
         } catch {
             print("[SignUp] error: \(error)")
             let msg = error.localizedDescription.lowercased()
-            if msg.contains("already registered") || msg.contains("already exists") {
-                if usePhone { navigateToOTP = true }
-                else {
-                    try? await supabase.auth.resend(email: email.trimmingCharacters(in: .whitespaces), type: .signup)
-                }
+            if !usePhone && (msg.contains("already registered") || msg.contains("already exists")) {
+                // Email already has an account — re-send the confirmation email.
+                try? await supabase.auth.resend(email: email.trimmingCharacters(in: .whitespaces), type: .signup)
             } else {
+                // Phone "already exists" and all other failures surface their message.
                 signUpError = error.localizedDescription
             }
         }
-    }
-
-    @MainActor
-    private func signUpSkipVerification() async {
-        isLoading = true
-        defer { isLoading = false }
-        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
-        let trimmedName  = name.trimmingCharacters(in: .whitespaces)
-
-        do {
-            try await supabase.auth.signUp(email: trimmedEmail, password: password, data: ["name": .string(trimmedName)])
-            print("[SkipVerify] signUp succeeded, isLoggedIn=\(authManager.isLoggedIn)")
-        } catch {
-            print("[SkipVerify] signUp error: \(error)")
-        }
-
-        if !authManager.isLoggedIn {
-            do {
-                try await supabase.auth.signIn(email: trimmedEmail, password: password)
-                print("[SkipVerify] signIn succeeded, isLoggedIn=\(authManager.isLoggedIn)")
-            } catch {
-                print("[SkipVerify] signIn error: \(error)")
-            }
-        }
-
-        print("[SkipVerify] final state — isLoggedIn=\(authManager.isLoggedIn) isVerified=\(authManager.isEmailVerified) isOnboarding=\(authManager.isOnboardingComplete)")
-        authManager.isVerificationBypassed = true
     }
 
     var body: some View {
@@ -217,7 +193,7 @@ struct CreateAccountView: View {
             // Header
             Text("Let's get you set up")
                 .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
 
             Spacer().frame(height: 8)
 
@@ -227,8 +203,9 @@ struct CreateAccountView: View {
                 // Name
                 TextField("Name", text: $name)
                     .padding()
-                    .background(Color(.systemGray6))
+                    .background(Color.knotSurface)
                     .cornerRadius(12)
+                    .knotSurfaceBorder(cornerRadius: 12)
 
                 // Email or Phone Toggle
                 VStack(alignment: .leading, spacing: 6) {
@@ -238,24 +215,24 @@ struct CreateAccountView: View {
                                 HStack(spacing: 4) {
                                     Text(selectedCountry.code)
                                         .font(.subheadline)
-                                        .foregroundColor(.black)
+                                        .foregroundColor(.primary)
                                     Image(systemName: "chevron.down")
                                         .font(.caption)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.secondary)
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 14)
-                                .background(Color(.systemGray5))
+                                .background(Color.knotSurface)
                                 .cornerRadius(12, corners: [.topLeft, .bottomLeft])
                             }
 
                             TextField("Enter phone number", text: $phone)
                                 .keyboardType(.phonePad)
                                 .padding()
-                                .background(phoneError.isEmpty ? Color(.systemGray6) : Color.red.opacity(0.1))
+                                .background(phoneError.isEmpty ? Color.knotSurface : Color.red.opacity(0.1))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(phoneError.isEmpty ? Color.clear : Color.red, lineWidth: 1.5)
+                                        .stroke(phoneError.isEmpty ? Color.knotBorder : Color.red, lineWidth: phoneError.isEmpty ? 1 : 1.5)
                                         .cornerRadius(12, corners: [.topRight, .bottomRight])
                                 )
                                 .cornerRadius(12, corners: [.topRight, .bottomRight])
@@ -275,7 +252,7 @@ struct CreateAccountView: View {
                         }
 
                         Button(action: { usePhone = false; phoneError = "" }) {
-                            Text("Enter email instead").font(.caption).foregroundColor(.gray)
+                            Text("Enter email instead").font(.caption).foregroundColor(.secondary)
                         }
 
                     } else {
@@ -283,10 +260,10 @@ struct CreateAccountView: View {
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
                             .padding()
-                            .background(emailError.isEmpty ? Color(.systemGray6) : Color.red.opacity(0.1))
+                            .background(emailError.isEmpty ? Color.knotSurface : Color.red.opacity(0.1))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(emailError.isEmpty ? Color.clear : Color.red, lineWidth: 1.5)
+                                    .stroke(emailError.isEmpty ? Color.knotBorder : Color.red, lineWidth: emailError.isEmpty ? 1 : 1.5)
                             )
                             .cornerRadius(12)
                             .onChange(of: email) { _ in
@@ -298,7 +275,7 @@ struct CreateAccountView: View {
                         }
 
                         Button(action: { usePhone = true; emailError = "" }) {
-                            Text("Enter phone number instead").font(.caption).foregroundColor(.gray)
+                            Text("Enter phone number instead").font(.caption).foregroundColor(.secondary)
                         }
                     }
                 }
@@ -313,14 +290,14 @@ struct CreateAccountView: View {
                         }
                         Button(action: { showPassword.toggle() }) {
                             Image(systemName: showPassword ? "eye.slash" : "eye")
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                         }
                     }
                     .padding()
-                    .background(passwordError.isEmpty ? Color(.systemGray6) : Color.red.opacity(0.1))
+                    .background(passwordError.isEmpty ? Color.knotSurface : Color.red.opacity(0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(passwordError.isEmpty ? Color.clear : Color.red, lineWidth: 1.5)
+                            .stroke(passwordError.isEmpty ? Color.knotBorder : Color.red, lineWidth: passwordError.isEmpty ? 1 : 1.5)
                     )
                     .cornerRadius(12)
                     .onChange(of: password) { _ in
@@ -342,14 +319,14 @@ struct CreateAccountView: View {
                         }
                         Button(action: { showVerifyPassword.toggle() }) {
                             Image(systemName: showVerifyPassword ? "eye.slash" : "eye")
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                         }
                     }
                     .padding()
-                    .background(verifyPasswordError.isEmpty ? Color(.systemGray6) : Color.red.opacity(0.1))
+                    .background(verifyPasswordError.isEmpty ? Color.knotSurface : Color.red.opacity(0.1))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(verifyPasswordError.isEmpty ? Color.clear : Color.red, lineWidth: 1.5)
+                            .stroke(verifyPasswordError.isEmpty ? Color.knotBorder : Color.red, lineWidth: verifyPasswordError.isEmpty ? 1 : 1.5)
                     )
                     .cornerRadius(12)
                     .onChange(of: verifyPassword) { _ in
@@ -361,6 +338,49 @@ struct CreateAccountView: View {
                     }
                 }
             }
+
+    // Terms & Privacy acceptance
+            HStack(alignment: .top, spacing: 10) {
+                Button(action: { agreedToTerms.toggle() }) {
+                    ZStack {
+                        Image(systemName: "square")
+                            .font(.system(size: 20))
+                            .foregroundColor(agreedToTerms ? Color.knotAccent : Color.knotMuted)
+                        if agreedToTerms {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(Color.knotAccent)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("I agree to the")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Button(action: { showTermsSheet = true }) {
+                            Text("Terms & Conditions")
+                                .font(.footnote)
+                                .underline()
+                                .foregroundColor(Color.knotAccent)
+                        }
+                        .buttonStyle(.plain)
+                        Text("and")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                        Button(action: { showPrivacySheet = true }) {
+                            Text("Privacy Policy")
+                                .font(.footnote)
+                                .underline()
+                                .foregroundColor(Color.knotAccent)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(.vertical, 4)
 
     // Join Knot Button
             if let err = signUpError {
@@ -382,46 +402,52 @@ struct CreateAccountView: View {
                     } else {
                         Text("Join Knot")
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(Color.knotOnAccent)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.black)
+                .background(agreedToTerms ? Color.knotAccent : Color.knotMuted)
                 .cornerRadius(12)
             }
-            .disabled(isLoading)
-
-            // Testing only — skips email verification
-            Button(action: {
-                if validate() {
-                    Task { await signUpSkipVerification() }
-                }
-            }) {
-                Text("Skip verification (testing)")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-            }
-
-            // Phone sign-up → OTP screen
-            NavigationLink(destination: EmailVerificationView(email: selectedCountry.code + phone, name: name, isPhone: true), isActive: $navigateToOTP) {
-                EmptyView()
-            }
-
-            NavigationLink(destination: BirthdayView(name: name), isActive: $navigateToBirthday) {
-                EmptyView()
-            }
+            .disabled(isLoading || !agreedToTerms)
 
             Spacer()
         }
         .padding(.horizontal, 24)
-        .background(Color.white.ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Create Account")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showCountryPicker) {
             CountryPickerView(selectedCountry: $selectedCountry, isPresented: $showCountryPicker)
         }
+        .sheet(isPresented: $showTermsSheet) {
+            NavigationStack {
+                LegalDocumentView(kind: .terms)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { showTermsSheet = false }
+                        }
+                    }
+            }
+        }
+        .sheet(isPresented: $showPrivacySheet) {
+            NavigationStack {
+                LegalDocumentView(kind: .privacy)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { showPrivacySheet = false }
+                }
+            }
+        }
+        .navigationDestination(isPresented: $navigateToOTP) {
+            EmailVerificationView(email: selectedCountry.code + phone, name: name, isPhone: true)
+        }
+        .navigationDestination(isPresented: $navigateToBirthday) {
+            BirthdayView(name: name)
+        }
     }
+}
 }
 
 // MARK: - OTP Verification Screen
@@ -481,23 +507,23 @@ struct EmailVerificationView: View {
             // Icon
             Image(systemName: isPhone ? "phone.circle.fill" : "envelope.circle.fill")
                 .font(.system(size: 72))
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
 
             // Header
             Text(isPhone ? "Verify your number" : "Verify your email")
                 .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
 
             // Subtext
             VStack(spacing: 8) {
                 Text("We sent a 6-digit code to")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
 
                 Text(contactDisplay)
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
             }
 
             // OTP Boxes
@@ -508,11 +534,11 @@ struct EmailVerificationView: View {
                         .multilineTextAlignment(.center)
                         .font(.title2.bold())
                         .frame(width: 44, height: 52)
-                        .background(Color(.systemGray6))
+                        .background(Color.knotSurface)
                         .cornerRadius(10)
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
-                                .stroke(focusedIndex == index ? Color.black : Color.clear, lineWidth: 1.5)
+                                .stroke(focusedIndex == index ? Color.knotAccent : Color.clear, lineWidth: 1.5)
                         )
                         .focused($focusedIndex, equals: index)
                         .onChange(of: otp[index]) { newValue in
@@ -548,12 +574,12 @@ struct EmailVerificationView: View {
                     } else {
                         Text("Verify")
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(Color.knotOnAccent)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(otpString.count == 6 ? Color.black : Color.gray)
+                .background(otpString.count == 6 ? Color.knotAccent : Color.gray)
                 .cornerRadius(12)
             }
             .disabled(otpString.count < 6 || isLoading)
@@ -564,7 +590,7 @@ struct EmailVerificationView: View {
             }) {
                 Text("Resend code")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
             }
 
             NavigationLink(destination: BirthdayView(name: name), isActive: $navigateToBirthday) {
@@ -574,7 +600,7 @@ struct EmailVerificationView: View {
             Spacer()
         }
         .padding(.horizontal, 24)
-        .background(Color.white.ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Verification")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(false)
@@ -604,12 +630,12 @@ struct BirthdayView: View {
 
             Text("When's your birthday?")
                 .font(.system(size: 24, weight: .semibold))
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
 
             Text("This helps us personalise your Knot experience.")
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
 
             // Date Picker
@@ -622,16 +648,18 @@ struct BirthdayView: View {
             .datePickerStyle(.wheel)
             .labelsHidden()
 
-            // Continue Button
+            // Continue Button — persist birthday before advancing so age-range checks work later.
             Button(action: {
+                let dob = birthday
+                Task { try? await ProfileService.saveBirthday(dob) }
                 navigateToInterests = true
             }) {
                 Text("Continue")
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.knotOnAccent)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.black)
+                    .background(Color.knotAccent)
                     .cornerRadius(12)
             }
 
@@ -642,7 +670,7 @@ struct BirthdayView: View {
             Spacer()
         }
         .padding(.horizontal, 24)
-        .background(Color.white.ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Customising Your Account")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -720,11 +748,11 @@ struct InterestsView: View {
 
             Text("What are you into?")
                 .font(.system(size: 24, weight: .semibold))
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
 
             Text("Pick at least 3 interests to help us connect you with your community.")
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
@@ -755,12 +783,12 @@ struct InterestsView: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
-                            .background(isSelected ? Color.black : Color.white)
-                            .foregroundColor(isSelected ? .white : .black)
+                            .background(isSelected ? Color.knotAccent : Color.knotSurface)
+                            .foregroundColor(isSelected ? .white : .primary)
                             .cornerRadius(20)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20)
-                                    .stroke(isSelected ? Color.black : Color(.systemGray3), lineWidth: 1)
+                                    .stroke(isSelected ? Color.knotAccent : Color.knotBorder, lineWidth: 1)
                             )
                         }
                         .buttonStyle(.plain)
@@ -779,7 +807,7 @@ struct InterestsView: View {
             // Counter
             Text("\(selected.count) selected")
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
 
             // Continue Button
             Button(action: {
@@ -791,10 +819,10 @@ struct InterestsView: View {
             }) {
                 Text("Continue")
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.knotOnAccent)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.black)
+                    .background(Color.knotAccent)
                     .cornerRadius(12)
             }
             .padding(.horizontal)
@@ -806,7 +834,7 @@ struct InterestsView: View {
             }) {
                 Text("Skip")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
             }
             .padding(.bottom, 8)
 
@@ -818,13 +846,16 @@ struct InterestsView: View {
                 EmptyView()
             }
         }
-        .background(Color.white.ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Customising Your Account")
         .navigationBarTitleDisplayMode(.inline)
     }
 
     @MainActor
     private func completeOnboarding() async {
+        // Persist selected interest names (display strings — stable and human-readable).
+        let chosen = filteredInterests.filter { selected.contains($0.id) }.map(\.name)
+        try? await ProfileService.saveInterests(chosen)
         try? await ProfileService.completeOnboarding()
         authManager.isOnboardingComplete = true
     }
@@ -896,11 +927,11 @@ struct LoadingView: View {
             // Animated Knot logo / title
             Text("Knot")
                 .font(.system(size: 48, weight: .heavy))
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
 
             Text("Calibrating your interests\(dots)")
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .frame(width: 260, alignment: .leading)
                 .onAppear {
                     // Animate dots
@@ -924,11 +955,11 @@ struct LoadingView: View {
             // Progress bar
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.systemGray5))
+                    .fill(Color.knotSurface)
                     .frame(height: 6)
 
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.black)
+                    .fill(Color.knotAccent)
                     .frame(width: progress * (UIScreen.main.bounds.width - 80), height: 6)
             }
             .frame(height: 6)
@@ -936,88 +967,13 @@ struct LoadingView: View {
 
             Spacer()
 
-            NavigationLink(destination: AddressView(name: name), isActive: $navigateToWelcome) {
+            NavigationLink(destination: WelcomeView(name: name), isActive: $navigateToWelcome) {
                 EmptyView()
             }
         }
-        .background(Color.white.ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .navigationTitle("")
-    }
-}
-
-// MARK: - Address View
-struct AddressView: View {
-    let name: String
-    @State private var street      = ""
-    @State private var city        = ""
-    @State private var postalCode  = ""
-    @State private var country     = ""
-    @State private var navigateToWelcome = false
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Spacer().frame(height: 16)
-
-                VStack(spacing: 8) {
-                    Text("Where do you live?")
-                        .font(.system(size: 28, weight: .bold)).foregroundColor(.black)
-                        .multilineTextAlignment(.center)
-                    Text("This is optional, but adding your address helps Knot show you the most relevant local groups, alerts, and neighbours.")
-                        .font(.subheadline).foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-
-                // Info banner
-                HStack(spacing: 10) {
-                    Image(systemName: "lock.fill").foregroundColor(.black)
-                    Text("Your address is private and never shared with other users.")
-                        .font(.caption).foregroundColor(.black)
-                }
-                .padding(12)
-                .background(Color(.systemGray6))
-                .cornerRadius(10)
-                .padding(.horizontal)
-
-                VStack(spacing: 14) {
-                    TextField("Street address", text: $street)
-                        .padding().background(Color(.systemGray6)).cornerRadius(12)
-                    TextField("City", text: $city)
-                        .padding().background(Color(.systemGray6)).cornerRadius(12)
-                    HStack(spacing: 12) {
-                        TextField("Postal code", text: $postalCode)
-                            .padding().background(Color(.systemGray6)).cornerRadius(12)
-                        TextField("Country", text: $country)
-                            .padding().background(Color(.systemGray6)).cornerRadius(12)
-                    }
-                }
-                .padding(.horizontal)
-
-                Button(action: { navigateToWelcome = true }) {
-                    Text("Continue")
-                        .fontWeight(.semibold).foregroundColor(.white)
-                        .frame(maxWidth: .infinity).padding()
-                        .background(Color.black).cornerRadius(12)
-                }
-                .padding(.horizontal)
-
-                Button(action: { navigateToWelcome = true }) {
-                    Text("Skip for now")
-                        .font(.subheadline).foregroundColor(.gray)
-                }
-
-                NavigationLink(destination: WelcomeView(name: name), isActive: $navigateToWelcome) {
-                    EmptyView()
-                }
-            }
-            .padding(.bottom, 32)
-        }
-        .background(Color.white.ignoresSafeArea())
-        .navigationBarBackButtonHidden(false)
-        .navigationTitle("Your Address")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -1032,16 +988,16 @@ struct WelcomeView: View {
 
             Text("Welcome to your account,")
                 .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
 
             Text(name)
                 .font(.system(size: 36, weight: .heavy))
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
 
             Text("You're all set. Let's get you connected with your community.")
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
@@ -1051,10 +1007,10 @@ struct WelcomeView: View {
             }) {
                 Text("Let's go")
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.knotOnAccent)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.black)
+                    .background(Color.knotAccent)
                     .cornerRadius(12)
             }
             .padding(.horizontal)
@@ -1065,7 +1021,7 @@ struct WelcomeView: View {
 
             Spacer()
         }
-        .background(Color.white.ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .navigationTitle("")
     }
@@ -1084,7 +1040,7 @@ struct CheckEmailView: View {
 
             Image(systemName: "envelope.circle.fill")
                 .font(.system(size: 72))
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
 
             VStack(spacing: 12) {
                 Text("Check your email")
@@ -1092,12 +1048,12 @@ struct CheckEmailView: View {
 
                 Text("We sent a confirmation link to\n**\(email)**")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
 
                 Text("Tap the link in the email to activate your account.")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -1108,12 +1064,12 @@ struct CheckEmailView: View {
                     } else {
                         Text(didResend ? "Email sent!" : "Resend confirmation email")
                             .fontWeight(.semibold)
-                            .foregroundColor(.white)
+                            .foregroundColor(Color.knotOnAccent)
                             .frame(maxWidth: .infinity)
                     }
                 }
                 .padding()
-                .background(didResend ? Color.gray : Color.black)
+                .background(didResend ? Color.gray : Color.knotAccent)
                 .cornerRadius(12)
                 .disabled(didResend || isResending)
             }
@@ -1121,7 +1077,7 @@ struct CheckEmailView: View {
 
             Spacer()
         }
-        .background(Color.white.ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Verify Email")
         .navigationBarTitleDisplayMode(.inline)
     }

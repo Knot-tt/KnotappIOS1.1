@@ -12,7 +12,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     ZStack {
-                        Circle().fill(Color.black).frame(width: 90, height: 90)
+                        Circle().fill(Color.knotAccent).frame(width: 90, height: 90)
                         if let img = profile.profileImage {
                             Image(uiImage: img)
                                 .resizable().scaledToFill()
@@ -21,17 +21,17 @@ struct ProfileView: View {
                         } else {
                             Text(profile.initial)
                                 .font(.system(size: 36, weight: .semibold))
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.knotOnAccent)
                         }
                     }
                     .padding(.top, 32)
 
-                    Text(profile.name).font(.system(size: 22, weight: .bold)).foregroundColor(.black)
+                    Text(profile.name).font(.system(size: 22, weight: .bold)).foregroundColor(.primary)
 
                     if !profile.bio.isEmpty {
                         Text(profile.bio)
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     }
@@ -39,37 +39,37 @@ struct ProfileView: View {
                     // Stats strip
                     HStack(spacing: 0) {
                         VStack(spacing: 2) {
-                            Text("\(profile.connections.count)")
-                                .font(.system(size: 18, weight: .bold)).foregroundColor(.black)
+                            Text("\(profile.profileConnectionCount)")
+                                .font(.system(size: 18, weight: .bold)).foregroundColor(.primary)
                             Text("Connections")
-                                .font(.caption).foregroundColor(.gray)
+                                .font(.caption).foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity)
 
                         Divider().frame(height: 32)
 
                         VStack(spacing: 2) {
-                            Text("\(profile.myListings.count)")
-                                .font(.system(size: 18, weight: .bold)).foregroundColor(.black)
+                            Text("\(profile.profileListingCount)")
+                                .font(.system(size: 18, weight: .bold)).foregroundColor(.primary)
                             Text("Listings")
-                                .font(.caption).foregroundColor(.gray)
+                                .font(.caption).foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity)
 
                         Divider().frame(height: 32)
 
                         VStack(spacing: 2) {
-                            Text("\(profile.joinedGroupIDs.count)")
-                                .font(.system(size: 18, weight: .bold)).foregroundColor(.black)
+                            Text("\(profile.profileKnotCount)")
+                                .font(.system(size: 18, weight: .bold)).foregroundColor(.primary)
                             Text("Knots")
-                                .font(.caption).foregroundColor(.gray)
+                                .font(.caption).foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity)
                     }
                     .padding(.vertical, 8)
-                    .background(Color.white)
+                    .background(Color.knotSurface)
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(.systemGray4), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.knotBorder, lineWidth: 1))
                     .padding(.horizontal)
 
                     Divider().padding(.horizontal)
@@ -98,7 +98,7 @@ struct ProfileView: View {
                                             Text(listing.name).font(.caption).fontWeight(.semibold)
                                                 .lineLimit(1).frame(width: 100, alignment: .leading)
                                             if listing.price > 0 {
-                                                Text("$\(listing.price)").font(.caption2).foregroundColor(.gray)
+                                                Text("$\(listing.price)").font(.caption2).foregroundColor(.secondary)
                                             } else {
                                                 Text("Free").font(.caption2).foregroundColor(.green)
                                             }
@@ -115,26 +115,29 @@ struct ProfileView: View {
                         NavigationLink(destination: EditProfileView()) {
                             ProfileRowLabel(icon: "person.fill", label: "Edit Profile")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(ProfileRowButtonStyle())
 
                         Divider().padding(.leading, 48)
 
                         NavigationLink(destination: NotificationsSettingsView()) {
                             ProfileRowLabel(icon: "bell.fill", label: "Notifications")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(ProfileRowButtonStyle())
 
                         Divider().padding(.leading, 48)
 
                         // Quick private account toggle
                         HStack(spacing: 14) {
                             Image(systemName: "lock.fill")
-                                .font(.system(size: 15)).foregroundColor(.black).frame(width: 24)
-                            Text("Private Account").font(.subheadline).foregroundColor(.black)
+                                .font(.system(size: 15)).foregroundColor(.primary).frame(width: 24)
+                            Text("Private Account").font(.subheadline).foregroundColor(.primary)
                             Spacer()
                             Toggle("", isOn: Binding(
                                 get: { profile.isPrivateAccount },
-                                set: { profile.isPrivateAccount = $0 }
+                                set: {
+                                    profile.isPrivateAccount = $0
+                                    profile.saveProfilePreferencesToSupabase()
+                                }
                             )).labelsHidden()
                         }
                         .padding(.horizontal, 16).padding(.vertical, 14)
@@ -144,34 +147,35 @@ struct ProfileView: View {
                         NavigationLink(destination: ProfileDisplaySettingsView()) {
                             ProfileRowLabel(icon: "eye.fill", label: "Profile Display")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(ProfileRowButtonStyle())
 
                         Divider().padding(.leading, 48)
 
                         NavigationLink(destination: PrivacySecurityView(onAccountDeleted: onLogout)) {
                             ProfileRowLabel(icon: "shield.fill", label: "Privacy & Security")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(ProfileRowButtonStyle())
 
                         Divider().padding(.leading, 48)
 
                         NavigationLink(destination: WalletPaymentsView()) {
                             ProfileRowLabel(icon: "creditcard.fill", label: "Wallet & Payments")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(ProfileRowButtonStyle())
 
                         Divider().padding(.leading, 48)
 
                         NavigationLink(destination: HelpSupportView()) {
                             ProfileRowLabel(icon: "questionmark.circle.fill", label: "Help & Support")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(ProfileRowButtonStyle())
 
                         Divider().padding(.leading, 48)
 
                         Button(action: { showLogoutConfirm = true }) {
                             ProfileRowLabel(icon: "rectangle.portrait.and.arrow.right", label: "Log Out", isDestructive: true)
                         }
+                        .buttonStyle(ProfileRowButtonStyle())
                         .alert("Log Out", isPresented: $showLogoutConfirm) {
                             Button("Log Out", role: .destructive) {
                                 dismiss()
@@ -182,19 +186,24 @@ struct ProfileView: View {
                             Text("Are you sure you want to log out?")
                         }
                     }
-                    .background(Color.white)
+                    .background(Color.knotSurface)
                     .cornerRadius(16)
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.systemGray4), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.knotBorder, lineWidth: 1))
                     .padding(.horizontal)
                 }
             }
-            .background(Color(.systemGray6).ignoresSafeArea())
+            .background(Color.knotBackground.ignoresSafeArea())
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
                 }
+            }
+            .task {
+                await profile.loadConnections()
+                await profile.loadKnots()
+                await profile.loadListings()
             }
         }
     }
@@ -209,15 +218,24 @@ struct ProfileDisplaySettingsView: View {
             Section {
                 Toggle("Show Knots", isOn: Binding(
                     get: { profile.showKnotsOnProfile },
-                    set: { profile.showKnotsOnProfile = $0 }
+                    set: {
+                        profile.showKnotsOnProfile = $0
+                        profile.saveProfilePreferencesToSupabase()
+                    }
                 ))
                 Toggle("Show Listings", isOn: Binding(
                     get: { profile.showListingsOnProfile },
-                    set: { profile.showListingsOnProfile = $0 }
+                    set: {
+                        profile.showListingsOnProfile = $0
+                        profile.saveProfilePreferencesToSupabase()
+                    }
                 ))
                 Toggle("Show Connections", isOn: Binding(
                     get: { profile.showConnectionsOnProfile },
-                    set: { profile.showConnectionsOnProfile = $0 }
+                    set: {
+                        profile.showConnectionsOnProfile = $0
+                        profile.saveProfilePreferencesToSupabase()
+                    }
                 ))
             } header: {
                 Text("What to show on your profile")
@@ -227,6 +245,20 @@ struct ProfileDisplaySettingsView: View {
         }
         .navigationTitle("Profile Display")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Profile Row Button Style (press highlight)
+/// Gives each profile row a visible pressed state so it's clear what you're
+/// tapping. NavigationLink renders as a button too, so this works for both the
+/// navigation rows and the plain action buttons (e.g. Log Out).
+/// `Color.primary.opacity` reads as a dark wash in light mode and a light wash
+/// in dark mode — visible against `knotSurface` either way.
+struct ProfileRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: ButtonStyleConfiguration) -> some View {
+        configuration.label
+            .background(configuration.isPressed ? Color.primary.opacity(0.1) : Color.clear)
+            .contentShape(Rectangle())
     }
 }
 
@@ -240,18 +272,20 @@ struct ProfileRowLabel: View {
         HStack(spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 15))
-                .foregroundColor(isDestructive ? .red : .black)
+                .foregroundColor(isDestructive ? .red : .primary)
                 .frame(width: 24)
             Text(label)
                 .font(.subheadline)
-                .foregroundColor(isDestructive ? .red : .black)
+                .foregroundColor(isDestructive ? .red : .primary)
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundColor(Color(.systemGray3))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+        .contentShape(Rectangle())
     }
 }
 

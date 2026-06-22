@@ -1,5 +1,5 @@
+
 import SwiftUI
-import PhotosUI
 
 // MARK: - Create / Edit Knot View
 struct CreateGroupView: View {
@@ -17,11 +17,8 @@ struct CreateGroupView: View {
 
     // Details
     @State private var category     = ""
-    @State private var streetAddress = ""
     @State private var city          = ""
-    @State private var postalCode    = ""
     @State private var country       = ""
-    @State private var hideLocationFromNonMembers = false
     @State private var maxMembersText = ""
 
     // Age
@@ -37,18 +34,11 @@ struct CreateGroupView: View {
     @State private var paymentType      : KnotPaymentType = .perSession
     @State private var priceText         = ""
 
-    // Photos (optional)
-    @State private var selectedPhotos : [PhotosPickerItem] = []
-    @State private var groupImages    : [UIImage]          = []
-
-    // Join Form
-    @State private var showFormBuilder = false
-    @State private var questions       : [FormQuestion]    = []
-
     let categories = ["Photography","Food","Fitness","Reading","Gaming","Arts",
                       "Music","Education","Gardening","Entertainment","Technology","Outdoors","Other"]
 
     var isEditing : Bool { existingGroup != nil }
+
     var canSave   : Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
         !description.trimmingCharacters(in: .whitespaces).isEmpty
@@ -80,49 +70,6 @@ struct CreateGroupView: View {
                 } header: { Text("Basic Info") }
                   footer: { Text("Name and description are required.") }
 
-                // ── Photos (optional) ────────────────────────────────────
-                Section {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 6, matching: .images) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 10).fill(Color(.systemGray5)).frame(width: 80, height: 80)
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "plus").font(.system(size: 22)).foregroundColor(.gray)
-                                        Text("Add").font(.caption2).foregroundColor(.gray)
-                                    }
-                                }
-                            }
-                            .onChange(of: selectedPhotos) { _, items in
-                                Task {
-                                    groupImages = []
-                                    for item in items {
-                                        if let data = try? await item.loadTransferable(type: Data.self),
-                                           let img = UIImage(data: data) { groupImages.append(img) }
-                                    }
-                                }
-                            }
-
-                            ForEach(groupImages.indices, id: \.self) { i in
-                                ZStack(alignment: .topTrailing) {
-                                    Image(uiImage: groupImages[i])
-                                        .resizable().scaledToFill()
-                                        .frame(width: 80, height: 80)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    Button(action: { groupImages.remove(at: i) }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(.black.opacity(0.7))
-                                            .background(Color.white.clipShape(Circle()))
-                                    }
-                                    .padding(4)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 6)
-                    }
-                } header: { Text("Photos (optional)") }
-                  footer: { Text("Add up to 6 photos. The first will be the cover.") }
-
                 // ── Details ──────────────────────────────────────────────
                 Section("Details") {
                     Menu {
@@ -134,9 +81,9 @@ struct CreateGroupView: View {
                         HStack {
                             Text("Category").foregroundColor(.primary)
                             Spacer()
-                            Text(category.isEmpty ? "Select" : category).foregroundColor(.gray)
+                            Text(category.isEmpty ? "Select" : category).foregroundColor(.secondary)
                             Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption2).foregroundColor(.gray)
+                                .font(.caption2).foregroundColor(.secondary)
                         }
                         .contentShape(Rectangle())
                     }
@@ -145,15 +92,10 @@ struct CreateGroupView: View {
 
                 // ── Location ─────────────────────────────────────────────
                 Section {
-                    TextField("Street address (optional)", text: $streetAddress)
                     TextField("City", text: $city)
-                    TextField("Postal code (optional)", text: $postalCode).keyboardType(.numberPad)
                     TextField("Country", text: $country)
-                    Toggle("Hide precise location from non-members", isOn: $hideLocationFromNonMembers)
                 } header: { Text("Location") }
-                  footer: { Text(hideLocationFromNonMembers
-                      ? "Only members will see the full address. Others will see the city only."
-                      : "Everyone can see the full address.") }
+                  footer: { Text("Use a broad location only. Do not enter a home address.") }
 
                 // ── Age Range ────────────────────────────────────────────
                 Section {
@@ -165,9 +107,9 @@ struct CreateGroupView: View {
                         HStack {
                             Text("Age Group").foregroundColor(.primary)
                             Spacer()
-                            Text(ageGroup.rawValue).foregroundColor(.gray)
+                            Text(ageGroup.rawValue).foregroundColor(.secondary)
                             Image(systemName: "chevron.up.chevron.down")
-                                .font(.caption2).foregroundColor(.gray)
+                                .font(.caption2).foregroundColor(.secondary)
                         }
                         .contentShape(Rectangle())
                     }
@@ -195,68 +137,17 @@ struct CreateGroupView: View {
                     }
                     .pickerStyle(.segmented)
                     Toggle("Require approval to join", isOn: $requiresApproval)
-                    Toggle("Paid Knot", isOn: $isPaid)
-                        .onChange(of: isPaid) { _, paid in
-                            // If toggling paid ON and type is still .free, default to per session
-                            if paid && paymentType == .free { paymentType = .perSession }
-                        }
-
-                    if isPaid {
-                        Menu {
-                            Button("Per Session") { paymentType = .perSession }
-                            Button("One Time")    { paymentType = .oneTime }
-                        } label: {
-                            HStack {
-                                Text("Charge type").foregroundColor(.primary)
-                                Spacer()
-                                Text(paymentType == .perSession ? "Per Session" : "One Time")
-                                    .foregroundColor(.gray)
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.caption2).foregroundColor(.gray)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        HStack {
-                            Text("$").foregroundColor(Color(.systemGray))
-                            TextField("Amount", text: $priceText).keyboardType(.numberPad)
-                        }
-                    }
                 } header: { Text("Options") }
                   footer: {
-                      if isPaid {
-                          Text("Members will be charged $" + priceText + " " + (paymentType == .perSession ? "each session" : "once") + ".")
-                      } else if isPrivate {
+                      if isPrivate {
                           Text("Only people connected to you can see this Knot.")
                       } else {
                           Text("Anyone can discover this Knot.")
                       }
                   }
 
-                // ── Join Form ─────────────────────────────────────────────
-                Section {
-                    Button(action: { showFormBuilder = true }) {
-                        HStack {
-                            Image(systemName: "doc.badge.plus").foregroundColor(.black)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(questions.isEmpty ? "Create Join Form" : "Edit Join Form (\(questions.count) question\(questions.count == 1 ? "" : "s"))")
-                                    .foregroundColor(.black)
-                                if !questions.isEmpty {
-                                    Text("Tap to edit questions")
-                                        .font(.caption).foregroundColor(.gray)
-                                }
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.caption).foregroundColor(Color(.systemGray3))
-                        }
-                    }
-                    if !questions.isEmpty {
-                        Button(role: .destructive, action: { questions.removeAll() }) {
-                            Label("Remove Form", systemImage: "trash")
-                        }
-                    }
-                } header: { Text("Join Form") }
-                  footer: { Text("Applicants fill this in when requesting to join. Mix open-ended and multiple choice questions.") }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(isEditing ? "Edit Knot" : "New Knot")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -264,7 +155,7 @@ struct CreateGroupView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(action: { saveGroup() }) {
                         if isSaving {
-                            ProgressView().tint(.black)
+                            ProgressView().tint(.primary)
                         } else {
                             Text(isEditing ? "Save" : "Create").fontWeight(.semibold)
                         }
@@ -277,8 +168,13 @@ struct CreateGroupView: View {
                 populateIfEditing()
                 didPopulate = true
             }
-            .sheet(isPresented: $showFormBuilder) {
-                FormBuilderView(questions: $questions)
+            .alert("Couldn't Save Knot", isPresented: Binding(
+                get: { saveError != nil },
+                set: { if !$0 { saveError = nil } }
+            )) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: {
+                Text(saveError ?? "")
             }
         }
     }
@@ -289,8 +185,7 @@ struct CreateGroupView: View {
         name                          = g.name
         description                   = g.description
         category                      = g.category
-        city                          = g.location  // best-effort: put full stored location into city
-        hideLocationFromNonMembers    = g.hideLocationFromNonMembers
+        city                          = g.location  // best-effort: put stored broad location into city
         maxMembersText                = g.maxMembers.map { String($0) } ?? ""
         requiresApproval              = g.requiresApproval
         isPrivate                     = g.isConnectionsOnly
@@ -301,10 +196,10 @@ struct CreateGroupView: View {
         isPaid           = g.isPaid
         paymentType      = g.paymentType
         priceText     = g.price > 0 ? String(g.price) : ""
-        questions        = g.joinFormQuestions
     }
 
     @State private var isSaving = false
+    @State private var saveError: String? = nil
 
     // MARK: - Save
     private func saveGroup() {
@@ -316,34 +211,10 @@ struct CreateGroupView: View {
         }
     }
 
-    /// Resolves the cover image to upload. Falls back to loading from the picker if
-    /// `groupImages` is empty due to a race (user tapped Save before onChange finished).
-    private func resolveCoverImage() async -> UIImage? {
-        print("[CreateGroupView] resolveCoverImage: groupImages=\(groupImages.count), selectedPhotos=\(selectedPhotos.count)")
-        if let img = groupImages.first {
-            print("[CreateGroupView] resolveCoverImage: using groupImages[0]")
-            return img
-        }
-        guard let pick = selectedPhotos.first else {
-            print("[CreateGroupView] resolveCoverImage: NO image to upload")
-            return nil
-        }
-        do {
-            if let data = try await pick.loadTransferable(type: Data.self),
-               let img = UIImage(data: data) {
-                print("[CreateGroupView] resolveCoverImage: loaded from picker (\(data.count) bytes)")
-                return img
-            }
-        } catch {
-            print("[CreateGroupView] resolveCoverImage: loadTransferable FAILED → \(error)")
-        }
-        return nil
-    }
-
     private func saveGroupAsync() async {
         let trimName = name.trimmingCharacters(in: .whitespaces)
         let trimDesc = description.trimmingCharacters(in: .whitespaces)
-        let trimLoc  = [streetAddress, city, postalCode, country]
+        let trimLoc  = [city, country]
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
             .joined(separator: ", ")
@@ -361,15 +232,14 @@ struct CreateGroupView: View {
                 imageName: categoryIcon(resolvedCategory),
                 description: trimDesc, memberCount: existing.memberCount,
                 category: resolvedCategory,
-                location: trimLoc, adminName: profile.name,
+                location: trimLoc, creatorID: existing.creatorID, adminName: profile.name,
                 maxMembers: maxMem, requiresApproval: requiresApproval,
                 isPublic: !isPrivate, isEvent: isEvent,
                 isConnectionsOnly: isPrivate,
-                hideLocationFromNonMembers: hideLocationFromNonMembers,
+                hideLocationFromNonMembers: false,
                 ageGroup: ageGroup, minAge: resolvedMinAge, maxAge: resolvedMaxAge,
                 isPaid: isPaid, paymentType: isPaid ? paymentType : .free,
-                price: isPaid ? price : 0,
-                joinFormQuestions: questions
+                price: isPaid ? price : 0
             )
             updated.imageURL = existing.imageURL   // don't wipe the old cover photo
             profile.updateCreatedGroup(updated)
@@ -381,32 +251,25 @@ struct CreateGroupView: View {
                 case .adult: return "adult"; case .senior: return "senior"; case .custom: return "custom"
                 }
             }()
-            let paymentTypeDB: String = {
-                if !isPaid { return "free" }
-                switch paymentType {
-                case .free, .perSession: return "per_session"
-                case .oneTime: return "one_time"
-                }
-            }()
             do {
                 try await KnotService.update(
                     knotID: existing.id, name: trimName, description: trimDesc,
                     category: resolvedCategory, location: trimLoc,
                     isPublic: isPublic, isEvent: isEvent,
                     isConnectionsOnly: isConnectionsOnly,
-                    hideLocationFromNonMembers: hideLocationFromNonMembers,
+                    hideLocationFromNonMembers: false,
                     requiresApproval: requiresApproval, maxMembers: maxMem,
                     ageGroup: ageGroupDB, minAge: resolvedMinAge, maxAge: resolvedMaxAge,
-                    isPaid: isPaid, paymentType: paymentTypeDB,
-                    priceCents: (isPaid ? price : 0) * 100
+                    isPaid: false, paymentType: "free",
+                    priceCents: 0
                 )
             } catch {
                 print("[CreateGroupView] KnotService.update error: \(error)")
+                saveError = error.localizedDescription
+                return
             }
-            // Upload cover photo via UserProfile (same pattern as profile picture)
-            if let coverImage = await resolveCoverImage() {
-                await profile.uploadKnotCoverImage(knotID: existing.id, image: coverImage)
-            }
+            await profile.loadKnots()
+            dismiss()
         } else {
             do {
                 let ageGroupDB: String = {
@@ -419,14 +282,7 @@ struct CreateGroupView: View {
                     case .custom: return "custom"
                     }
                 }()
-                let paymentTypeDB: String = {
-                    if !isPaid { return "free" }
-                    switch paymentType {
-                    case .free, .perSession: return "per_session"
-                    case .oneTime:           return "one_time"
-                    }
-                }()
-                let dbKnot = try await KnotService.create(
+                _ = try await KnotService.create(
                     name                       : trimName,
                     description                : trimDesc,
                     category                   : resolvedCategory,
@@ -435,49 +291,22 @@ struct CreateGroupView: View {
                     isEvent                    : isEvent,
                     requiresApproval           : requiresApproval,
                     isConnectionsOnly          : isPrivate,
-                    hideLocationFromNonMembers : hideLocationFromNonMembers,
+                    hideLocationFromNonMembers : false,
                     maxMembers                 : maxMem,
                     ageGroup                   : ageGroupDB,
                     minAge                     : resolvedMinAge,
                     maxAge                     : resolvedMaxAge,
-                    isPaid                     : isPaid,
-                    paymentType                : isPaid ? paymentTypeDB : "free",
-                    priceCents                 : isPaid ? price * 100 : 0
+                    isPaid                     : false,
+                    paymentType                : "free",
+                    priceCents                 : 0
                 )
-                let newGroup = CommunityGroup(
-                    id          : dbKnot.id,
-                    name        : dbKnot.name,
-                    imageName   : categoryIcon(dbKnot.category),
-                    description : dbKnot.description,
-                    memberCount : 1,
-                    category    : dbKnot.category,
-                    location    : dbKnot.location,
-                    adminName   : profile.name,
-                    maxMembers  : dbKnot.maxMembers,
-                    requiresApproval           : dbKnot.requiresApproval,
-                    isPublic                   : dbKnot.isPublic,
-                    isEvent                    : dbKnot.isEvent,
-                    isConnectionsOnly          : dbKnot.isConnectionsOnly,
-                    hideLocationFromNonMembers : dbKnot.hideLocationFromNonMembers,
-                    ageGroup    : ageGroup,
-                    minAge      : dbKnot.minAge,
-                    maxAge      : dbKnot.maxAge,
-                    isPaid      : dbKnot.isPaid,
-                    paymentType : paymentType,
-                    price       : dbKnot.priceCents / 100,
-                    joinFormQuestions: questions
-                )
-                profile.addKnot(newGroup)
-
-                // Upload cover photo via UserProfile (same pattern as profile picture)
-                if let coverImage = await resolveCoverImage() {
-                    await profile.uploadKnotCoverImage(knotID: dbKnot.id, image: coverImage)
-                }
+                await profile.loadKnots()
+                dismiss()
             } catch {
                 print("[CreateGroupView] KnotService.create error: \(error)")
+                saveError = error.localizedDescription
             }
         }
-        dismiss()
     }
 
     private func defaultMinAge(_ ag: AgeGroup) -> Int {
@@ -491,99 +320,5 @@ struct CreateGroupView: View {
         case .any: return 99; case .teen: return 17; case .young: return 25
         case .adult: return 54; case .senior: return 99; case .custom: return Int(maxAge)
         }
-    }
-}
-
-// MARK: - Form Builder View (Google Forms style)
-struct FormBuilderView: View {
-    @Binding var questions: [FormQuestion]
-    @Environment(\.dismiss) var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List {
-                if questions.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "doc.text").font(.system(size: 40)).foregroundColor(Color(.systemGray3))
-                        Text("No questions yet").font(.headline).foregroundColor(Color(.systemGray))
-                        Text("Add open-ended or multiple choice questions below.")
-                            .font(.caption).foregroundColor(Color(.systemGray3)).multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity).padding(40)
-                    .listRowBackground(Color.clear)
-                } else {
-                    ForEach($questions) { $q in
-                        QuestionBuilderRow(question: $q) {
-                            questions.removeAll { $0.id == q.id }
-                        }
-                    }
-                    .onMove { from, to in questions.move(fromOffsets: from, toOffset: to) }
-                }
-            }
-            .navigationTitle("Join Form")
-            .navigationBarTitleDisplayMode(.inline)
-            .environment(\.editMode, .constant(.active))
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }.fontWeight(.semibold)
-                }
-                ToolbarItemGroup(placement: .bottomBar) {
-                    Button(action: { questions.append(FormQuestion(type: .openEnded, prompt: "")) }) {
-                        Label("Open Ended", systemImage: "text.alignleft")
-                    }
-                    Spacer()
-                    Button(action: { questions.append(FormQuestion(type: .mcq, prompt: "", options: ["Option 1", "Option 2"])) }) {
-                        Label("Multiple Choice", systemImage: "list.bullet")
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Question Builder Row
-struct QuestionBuilderRow: View {
-    @Binding var question: FormQuestion
-    let onDelete: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-
-            HStack {
-                Picker("", selection: $question.type) {
-                    ForEach(FormQuestion.QuestionType.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.menu).labelsHidden()
-                Spacer()
-                HStack(spacing: 4) {
-                    Toggle("", isOn: $question.required).labelsHidden()
-                    Text("Required").font(.caption).foregroundColor(.gray)
-                }
-                Button(action: onDelete) { Image(systemName: "trash").foregroundColor(.red) }.padding(.leading, 8)
-            }
-
-            TextField("Question", text: $question.prompt, axis: .vertical)
-                .lineLimit(1...3).padding(10).background(Color(.systemGray6)).cornerRadius(8)
-
-            if question.type == .mcq {
-                VStack(spacing: 6) {
-                    ForEach(question.options.indices, id: \.self) { i in
-                        HStack(spacing: 8) {
-                            Image(systemName: "circle").foregroundColor(.gray).font(.caption)
-                            TextField("Option \(i + 1)", text: $question.options[i])
-                            if question.options.count > 2 {
-                                Button(action: { question.options.remove(at: i) }) {
-                                    Image(systemName: "minus.circle.fill").foregroundColor(.red)
-                                }
-                            }
-                        }
-                    }
-                }
-                Button(action: { question.options.append("") }) {
-                    Label("Add Option", systemImage: "plus").font(.caption).foregroundColor(.black)
-                }
-            }
-        }
-        .padding(.vertical, 4)
     }
 }

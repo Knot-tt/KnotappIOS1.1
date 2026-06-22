@@ -48,6 +48,7 @@ struct MainTabView: View {
                 MessagesView()
             }
         }
+        .tint(Color.knotAccent)
         .tabBarMinimizeBehavior(.onScrollDown)
         .environment(profile)
         .navigationBarBackButtonHidden(true)
@@ -56,18 +57,48 @@ struct MainTabView: View {
             // Only reload when returning from background — not from inactive
             // (inactive fires whenever system menus, pickers, or alerts appear)
             if newPhase == .active && oldPhase == .background {
-                Task { await profile.loadConnections() }
+                Task {
+                    // Sequential on purpose — concurrent Supabase requests deadlock
+                    // the client's auth layer (see loadFromSupabase note).
+                    await profile.loadKnots()
+                    await profile.loadConnections()
+                    await profile.loadConversations()
+                    await profile.loadAnnouncements()
+                    await profile.loadListings()
+                    await profile.loadOrders()
+                }
             }
             lastPhase = newPhase
         }
         .task {
+            // Route tapped notifications into the right app area. Replays any
+            // tap that arrived before now (cold launch from a notification).
+            NotificationManager.shared.registerOpenHandler { [weak profile] route in
+                switch route {
+                case .conversation(let id):
+                    profile?.openConversationFromNotification(id)
+                case .alerts:
+                    profile?.openAlertsFromNotification()
+                case .orders(let orderID):
+                    profile?.openOrdersFromNotification(orderID: orderID)
+                case .hub:
+                    profile?.selectedTab = .buy
+                }
+            }
             // Wire auth → profile load. Called once when the tab view appears.
             // AuthManager fires this on every subsequent sign-in too.
             authManager.onSignedIn = { [weak profile] user in
+                await NotificationManager.shared.retrySavingDeviceToken()
                 await profile?.loadFromSupabase(userID: user.id)
+            }
+            // Wire auth → profile wipe. Fired BEFORE auth state flips on sign-out,
+            // so the next user never sees stale data from the previous one.
+            authManager.onSignOut = { [weak profile] in
+                profile?.clearAllData()
             }
             // If already signed in (restored session), load now.
             if let user = authManager.currentUser {
+                await NotificationManager.shared.retrySavingDeviceToken()
                 await profile.loadFromSupabase(userID: user.id)
             }
         }

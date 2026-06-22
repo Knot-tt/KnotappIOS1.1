@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		90872E3FD31D42109C2EF905 /* Color+Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81700528EF6D42C0A7893CB7 /* Color+Theme.swift */; };
 		951D62BD2F8E738200C46413 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 951D62BC2F8E738200C46413 /* Supabase */; };
 		951D63182F8E772800C46413 /* Dashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D62EF2F8E772800C46413 /* Dashboard.swift */; };
 		951D631D2F8E772800C46413 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D62FA2F8E772800C46413 /* MainTabView.swift */; };
@@ -36,6 +37,14 @@
 		951D6440AAAAAAAA00C46413 /* SupabaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6441AAAAAAAA00C46413 /* SupabaseModels.swift */; };
 		951D6447AAAAAAAA00C46413 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6446AAAAAAAA00C46413 /* Configuration.swift */; };
 		951D6448AAAAAAAA00C46413 /* PasswordPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6449AAAAAAAA00C46413 /* PasswordPolicy.swift */; };
+		951D6454AAAAAAAA00C46413 /* PHPickerRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6455AAAAAAAA00C46413 /* PHPickerRepresentable.swift */; };
+		951D6456AAAAAAAA00C46413 /* MessageImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6457AAAAAAAA00C46413 /* MessageImageView.swift */; };
+		951D6458AAAAAAAA00C46413 /* LegalDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D6459AAAAAAAA00C46413 /* LegalDocumentView.swift */; };
+		951D645AAAAAAAAA00C46413 /* KeyboardDismiss.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951D645BAAAAAAAA00C46413 /* KeyboardDismiss.swift */; };
+		951DCA01000000000000F001 /* ChatPhotoFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951DCA01000000000000F002 /* ChatPhotoFlow.swift */; };
+		959B4B462FC49C0900FE9CB5 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 959B4B452FC49C0900FE9CB5 /* NotificationManager.swift */; };
+		95D038AC2FC17EAE0008ECFA /* SurfaceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95D038AB2FC17EAE0008ECFA /* SurfaceStyle.swift */; };
+		95DEBEE92FACD1EF00A24A80 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 95DEBEE82FACD1EF00A24A80 /* Assets.xcassets */; };
 		95E3BEA42F703DEC00D0F1E4 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = 95E3BEA32F703DEC00D0F1E4 /* FirebaseAI */; };
 		95E3BEA62F703DEC00D0F1E4 /* FirebaseAILogic in Frameworks */ = {isa = PBXBuildFile; productRef = 95E3BEA52F703DEC00D0F1E4 /* FirebaseAILogic */; };
 		95E3BEA82F703DEC00D0F1E4 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 95E3BEA72F703DEC00D0F1E4 /* FirebaseAnalytics */; };
@@ -62,6 +71,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		81700528EF6D42C0A7893CB7 /* Color+Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Theme.swift"; sourceTree = "<group>"; };
 		950DB64D2FA722B3008A2F25 /* Knot.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Knot.entitlements; sourceTree = "<group>"; };
 		951D62EF2F8E772800C46413 /* Dashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dashboard.swift; sourceTree = "<group>"; };
 		951D62F02F8E772800C46413 /* KnotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnotApp.swift; sourceTree = "<group>"; };
@@ -93,7 +103,15 @@
 		951D6445AAAAAAAA00C46413 /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		951D6446AAAAAAAA00C46413 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		951D6449AAAAAAAA00C46413 /* PasswordPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordPolicy.swift; sourceTree = "<group>"; };
-		95E3BE5A2F6FF27C00D0F1E4 /* Knot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Knot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		951D6455AAAAAAAA00C46413 /* PHPickerRepresentable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PHPickerRepresentable.swift; sourceTree = "<group>"; };
+		951D6457AAAAAAAA00C46413 /* MessageImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageImageView.swift; sourceTree = "<group>"; };
+		951D6459AAAAAAAA00C46413 /* LegalDocumentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocumentView.swift; sourceTree = "<group>"; };
+		951D645BAAAAAAAA00C46413 /* KeyboardDismiss.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardDismiss.swift; sourceTree = "<group>"; };
+		951DCA01000000000000F002 /* ChatPhotoFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPhotoFlow.swift; sourceTree = "<group>"; };
+		959B4B452FC49C0900FE9CB5 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		95D038AB2FC17EAE0008ECFA /* SurfaceStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurfaceStyle.swift; sourceTree = "<group>"; };
+		95DEBEE82FACD1EF00A24A80 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		95E3BE5A2F6FF27C00D0F1E4 /* Knot test.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Knot test.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		95E3BE692F6FF27D00D0F1E4 /* KnotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		95E3BE732F6FF27D00D0F1E4 /* KnotUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KnotUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -147,12 +165,14 @@
 			isa = PBXGroup;
 			children = (
 				950DB64D2FA722B3008A2F25 /* Knot.entitlements */,
+				95DEBEE82FACD1EF00A24A80 /* Assets.xcassets */,
 				951D62EF2F8E772800C46413 /* Dashboard.swift */,
 				951D62F02F8E772800C46413 /* KnotApp.swift */,
 				951D62F92F8E772800C46413 /* LoginView.swift */,
 				951D62FA2F8E772800C46413 /* MainTabView.swift */,
-				951D62FD2F8E772800C46413 /* ManageGroupView.swift */,
 				951D62FF2F8E772800C46413 /* MessagesView.swift */,
+				951DCA01000000000000F002 /* ChatPhotoFlow.swift */,
+				959B4B452FC49C0900FE9CB5 /* NotificationManager.swift */,
 				951D63012F8E772800C46413 /* NotificationsSettingsView.swift */,
 				951D63022F8E772800C46413 /* PrivacySecurityView.swift */,
 				951D63052F8E772800C46413 /* ProfileView.swift */,
@@ -176,7 +196,14 @@
 				951D6444AAAAAAAA00C46413 /* Config.xcconfig */,
 				951D6445AAAAAAAA00C46413 /* Config.xcconfig */,
 				951D6446AAAAAAAA00C46413 /* Configuration.swift */,
+				951D62FD2F8E772800C46413 /* ManageGroupView.swift */,
 				951D6449AAAAAAAA00C46413 /* PasswordPolicy.swift */,
+				951D6455AAAAAAAA00C46413 /* PHPickerRepresentable.swift */,
+				951D6457AAAAAAAA00C46413 /* MessageImageView.swift */,
+				951D6459AAAAAAAA00C46413 /* LegalDocumentView.swift */,
+				951D645BAAAAAAAA00C46413 /* KeyboardDismiss.swift */,
+				95D038AB2FC17EAE0008ECFA /* SurfaceStyle.swift */,
+				81700528EF6D42C0A7893CB7 /* Color+Theme.swift */,
 			);
 			path = Knot;
 			sourceTree = "<group>";
@@ -194,7 +221,7 @@
 		95E3BE5B2F6FF27C00D0F1E4 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				95E3BE5A2F6FF27C00D0F1E4 /* Knot.app */,
+				95E3BE5A2F6FF27C00D0F1E4 /* Knot test.app */,
 				95E3BE692F6FF27D00D0F1E4 /* KnotTests.xctest */,
 				95E3BE732F6FF27D00D0F1E4 /* KnotUITests.xctest */,
 			);
@@ -227,7 +254,7 @@
 				95E3BEAB2F703DEC00D0F1E4 /* FirebaseAnalyticsIdentitySupport */,
 			);
 			productName = Knot;
-			productReference = 95E3BE5A2F6FF27C00D0F1E4 /* Knot.app */;
+			productReference = 95E3BE5A2F6FF27C00D0F1E4 /* Knot test.app */;
 			productType = "com.apple.product-type.application";
 		};
 		95E3BE682F6FF27D00D0F1E4 /* KnotTests */ = {
@@ -330,6 +357,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				95DEBEE92FACD1EF00A24A80 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -356,6 +384,8 @@
 			files = (
 				951D63182F8E772800C46413 /* Dashboard.swift in Sources */,
 				951D631D2F8E772800C46413 /* MainTabView.swift in Sources */,
+				90872E3FD31D42109C2EF905 /* Color+Theme.swift in Sources */,
+				95D038AC2FC17EAE0008ECFA /* SurfaceStyle.swift in Sources */,
 				951D631E2F8E772800C46413 /* NotificationsSettingsView.swift in Sources */,
 				951D631F2F8E772800C46413 /* KnotApp.swift in Sources */,
 				951D63212F8E772800C46413 /* SearchView.swift in Sources */,
@@ -367,7 +397,9 @@
 				951D63302F8E772800C46413 /* SupabaseManager.swift in Sources */,
 				951D6440AAAAAAAA00C46413 /* SupabaseModels.swift in Sources */,
 				951D63322F8E772800C46413 /* MessagesView.swift in Sources */,
+				951DCA01000000000000F001 /* ChatPhotoFlow.swift in Sources */,
 				951D63332F8E772800C46413 /* UserProfile.swift in Sources */,
+				959B4B462FC49C0900FE9CB5 /* NotificationManager.swift in Sources */,
 				951D63362F8E772800C46413 /* SignUpView.swift in Sources */,
 				951D63392F8E772800C46413 /* PurchaseFlow.swift in Sources */,
 				951D633E2F8E772800C46413 /* TransactionFlow.swift in Sources */,
@@ -382,6 +414,10 @@
 				951D6420AAAAAAAA00C46413 /* AnnouncementsView.swift in Sources */,
 				951D6447AAAAAAAA00C46413 /* Configuration.swift in Sources */,
 				951D6448AAAAAAAA00C46413 /* PasswordPolicy.swift in Sources */,
+				951D6454AAAAAAAA00C46413 /* PHPickerRepresentable.swift in Sources */,
+				951D6456AAAAAAAA00C46413 /* MessageImageView.swift in Sources */,
+				951D6458AAAAAAAA00C46413 /* LegalDocumentView.swift in Sources */,
+				951D645AAAAAAAAA00C46413 /* KeyboardDismiss.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -539,13 +575,18 @@
 			baseConfigurationReference = 951D6444AAAAAAAA00C46413 /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=iphoneos*]" = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Knot/Knot.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 105;
 				DEVELOPMENT_TEAM = KG5DVZZN8T;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				"INFOPLIST_FILE[sdk=*]" = Knot/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Knott;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_SupabaseAnonKey = "$(SUPABASE_ANON_KEY)";
 				INFOPLIST_KEY_SupabaseURL = "$(SUPABASE_URL)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -557,9 +598,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = personal.Knot;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Knot test";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -577,11 +619,16 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Knot/Knot.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 105;
 				DEVELOPMENT_TEAM = KG5DVZZN8T;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				"INFOPLIST_FILE[sdk=*]" = Knot/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Knott;
+				"INFOPLIST_KEY_CFBundleDisplayName[sdk=iphoneos*]" = Knott;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_SupabaseAnonKey = "$(SUPABASE_ANON_KEY)";
 				INFOPLIST_KEY_SupabaseURL = "$(SUPABASE_URL)";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -593,9 +640,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = personal.Knot;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Knot test";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -611,10 +659,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 102;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = personal.KnotTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -632,10 +680,10 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 102;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = personal.KnotTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -652,9 +700,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 102;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = personal.KnotUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
@@ -671,9 +719,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 102;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = personal.KnotUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;

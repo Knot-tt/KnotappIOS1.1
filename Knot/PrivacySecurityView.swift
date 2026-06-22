@@ -6,18 +6,21 @@ import Auth
 struct PrivacySecurityView: View {
     var onAccountDeleted: () -> Void = {}
     @Environment(UserProfile.self) var profile
-    @State private var twoFactorEnabled = false
     var body: some View {
         List {
             Section("Security") {
                 NavigationLink("Change Password") { ChangePasswordView() }
-                Toggle("Two-Factor Authentication", isOn: $twoFactorEnabled)
+                // Two-factor authentication will return when we wire Supabase MFA enrollment.
+                // Removed for now because the toggle didn't do anything — it misled users.
             }
 
             Section {
                 Toggle("Private Account", isOn: Binding(
                     get: { profile.isPrivateAccount },
-                    set: { profile.isPrivateAccount = $0 }
+                    set: {
+                        profile.isPrivateAccount = $0
+                        profile.saveProfilePreferencesToSupabase()
+                    }
                 ))
                 NavigationLink("Blocked Users") { BlockedUsersView() }
             } header: {
@@ -26,13 +29,6 @@ struct PrivacySecurityView: View {
                 Text(profile.isPrivateAccount
                      ? "Your profile shows only your name and bio to people who aren't your connections. Only connections can message you."
                      : "Your profile is public. Anyone can view your profile and message you.")
-            }
-
-            Section("Data") {
-                Button("Download My Data") {
-                    // TODO: trigger data export via Supabase
-                }
-                .foregroundColor(.black)
             }
 
             Section {
@@ -76,7 +72,7 @@ struct ChangePasswordView: View {
                     }
                     Button(action: { showNewPw.toggle() }) {
                         Image(systemName: showNewPw ? "eye.slash" : "eye")
-                            .foregroundColor(Color(.systemGray3))
+                            .foregroundColor(Color.knotMuted)
                     }.buttonStyle(.plain)
                 }
 
@@ -108,13 +104,14 @@ struct ChangePasswordView: View {
                     } else {
                         Text("Update Password")
                             .frame(maxWidth: .infinity, alignment: .center)
-                            .foregroundColor(canUpdate ? .black : Color(.systemGray3))
+                            .foregroundColor(canUpdate ? .primary : Color.knotMuted)
                             .fontWeight(.semibold)
                     }
                 }
                 .disabled(!canUpdate || isLoading)
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Change Password")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -152,19 +149,61 @@ struct ChangePasswordView: View {
 
 // MARK: - Blocked Users View
 struct BlockedUsersView: View {
+    @Environment(UserProfile.self) var profile
+    @State private var blockedIDs : [UUID] = []
+    @State private var isLoading  = true
+
     var body: some View {
         List {
-            // TODO: load from Supabase
+            if !blockedIDs.isEmpty {
+                Section {
+                    ForEach(blockedIDs, id: \.self) { uid in
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle().fill(Color.knotAccent).frame(width: 36, height: 36)
+                                Text(String((profile.connectionProfiles[uid] ?? "?").prefix(1)).uppercased())
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(Color.knotOnAccent)
+                            }
+                            Text(profile.connectionProfiles[uid] ?? "Unknown user")
+                                .font(.subheadline)
+                            Spacer()
+                            Button("Unblock") {
+                                Task {
+                                    try? await SettingsService.unblock(userID: uid)
+                                    blockedIDs.removeAll { $0 == uid }
+                                }
+                            }
+                            .font(.caption).fontWeight(.semibold)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(Color.knotSurface)
+                            .foregroundColor(.primary)
+                            .cornerRadius(8)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                } footer: {
+                    Text("Blocked users can't see your profile, message you, or send connection requests.")
+                }
+            }
         }
         .overlay {
-            ContentUnavailableView(
-                "No Blocked Users",
-                systemImage: "person.fill.xmark",
-                description: Text("Users you block won't be able to see your profile or contact you.")
-            )
+            if !isLoading && blockedIDs.isEmpty {
+                ContentUnavailableView(
+                    "No Blocked Users",
+                    systemImage: "person.fill.xmark",
+                    description: Text("Users you block won't be able to see your profile or contact you. Open someone's profile and tap Block to add them here.")
+                )
+            }
         }
         .navigationTitle("Blocked Users")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            if let ids = try? await SettingsService.fetchBlockedUserIDs() {
+                blockedIDs = ids
+            }
+            isLoading = false
+        }
     }
 }
 
@@ -174,13 +213,24 @@ struct DeleteAccountView: View {
     var onAccountDeleted: () -> Void = {}
     @Environment(\.dismiss) var dismiss
     @Environment(UserProfile.self) var profile
-    @State private var password     = ""
-    @State private var showPassword = false
-    @State private var isLoading    = false
-    @State private var showError    = false
-    @State private var isDeleted    = false
+    @State private var password         = ""
+    @State private var showPassword     = false
+    @State private var typedConfirm     = ""        // OAuth users type "DELETE" instead
+    @State private var isLoading        = false
+    @State private var errorMessage     : String? = nil
+    @State private var isDeleted        = false
 
-    private var canDelete: Bool { !password.isEmpty }
+    /// True iff the user has an email/password identity on their auth account.
+    /// OAuth-only users (Google, Apple) have no password to re-enter.
+    private var hasPasswordIdentity: Bool {
+        let identities = supabase.auth.currentUser?.identities ?? []
+        return identities.contains { $0.provider == "email" }
+    }
+
+    private var canDelete: Bool {
+        if hasPasswordIdentity { return !password.isEmpty }
+        return typedConfirm.uppercased() == "DELETE"
+    }
 
     var body: some View {
         List {
@@ -202,25 +252,43 @@ struct DeleteAccountView: View {
             }
 
             Section {
-                HStack {
-                    if showPassword {
-                        TextField("Enter your password to confirm", text: $password)
-                            .disabled(isLoading)
-                    } else {
-                        SecureField("Enter your password to confirm", text: $password)
-                            .disabled(isLoading)
+                if hasPasswordIdentity {
+                    HStack {
+                        if showPassword {
+                            TextField("Enter your password to confirm", text: $password)
+                                .disabled(isLoading)
+                                .autocapitalization(.none)
+                        } else {
+                            SecureField("Enter your password to confirm", text: $password)
+                                .disabled(isLoading)
+                        }
+                        Button(action: { showPassword.toggle() }) {
+                            Image(systemName: showPassword ? "eye.slash" : "eye")
+                                .foregroundColor(Color.knotMuted)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isLoading)
                     }
-                    Button(action: { showPassword.toggle() }) {
-                        Image(systemName: showPassword ? "eye.slash" : "eye")
-                            .foregroundColor(Color(.systemGray3))
+                } else {
+                    // OAuth-only accounts (Google / Apple sign-in) have no password.
+                    // Use a typed confirmation instead.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Type DELETE to confirm")
+                            .font(.caption).foregroundColor(.secondary)
+                        TextField("DELETE", text: $typedConfirm)
+                            .disabled(isLoading)
+                            .autocapitalization(.allCharacters)
+                            .autocorrectionDisabled()
                     }
-                    .buttonStyle(.plain)
-                    .disabled(isLoading)
                 }
-                if showError {
-                    Text("Incorrect password. Please try again.")
+                if let msg = errorMessage {
+                    Text(msg)
                         .font(.caption)
                         .foregroundColor(Color(.systemRed))
+                }
+            } footer: {
+                if !hasPasswordIdentity {
+                    Text("You signed in with Google or Apple, so we ask you to type DELETE instead of a password.")
                 }
             }
 
@@ -236,10 +304,10 @@ struct DeleteAccountView: View {
                         Text("Delete My Account")
                             .frame(maxWidth: .infinity, alignment: .center)
                             .fontWeight(.semibold)
-                            .foregroundColor(canDelete ? .white : Color(.systemGray3))
+                            .foregroundColor(canDelete ? .white : Color.knotMuted)
                     }
                 }
-                .listRowBackground(canDelete ? Color(.systemRed) : Color(.systemGray5))
+                .listRowBackground(canDelete ? Color(.systemRed) : Color.knotSurface)
                 .disabled(!canDelete || isLoading)
 
                 Button("Cancel") { dismiss() }
@@ -248,6 +316,7 @@ struct DeleteAccountView: View {
                     .disabled(isLoading)
             }
         }
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Delete Account")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(isLoading)
@@ -260,40 +329,70 @@ struct DeleteAccountView: View {
 
     private func deleteAccount() {
         isLoading = true
-        showError = false
+        errorMessage = nil
         Task { @MainActor in
             defer { isLoading = false }
-            do {
-                // Step 1: Re-authenticate to confirm the user knows their password.
+
+            // 1. Re-authenticate (password users only).
+            if hasPasswordIdentity {
                 guard let email = supabase.auth.currentUser?.email else {
-                    showError = true
+                    errorMessage = "Couldn't read your account email. Please sign out and back in, then try again."
                     return
                 }
-                try await supabase.auth.signIn(email: email, password: password)
-
-                // Step 2: Call the delete-account Edge Function (service_role required
-                // to call supabase.auth.admin.deleteUser — the client SDK cannot do this).
-                //
-                // TODO (Phase 7): deploy a `delete-account` edge function and call it here.
-                // Until then, the account is signed out on this device but NOT permanently
-                // deleted from Supabase. Show the user a clear message about this.
-                //
-                // Example call when ready:
-                //   let session = try await supabase.auth.session
-                //   var req = URLRequest(url: URL(string: "\(Configuration.supabaseURL)/functions/v1/delete-account")!)
-                //   req.httpMethod = "POST"
-                //   req.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-                //   let (_, response) = try await URLSession.shared.data(for: req)
-                //   guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
-
-                // For now: sign out globally so the account is inaccessible on all devices,
-                // then clear local state. The account still exists in Supabase until Phase 7.
-                try? await supabase.auth.signOut(scope: .global)
-                profile.clearAllData()
-                isDeleted = true
-            } catch {
-                showError = true
+                do {
+                    try await supabase.auth.signIn(email: email, password: password)
+                } catch {
+                    // Bad credentials are the most common cause here. Distinguish from
+                    // network failures so the message matches the actual problem.
+                    let s = (error as NSError).localizedDescription.lowercased()
+                    if s.contains("invalid") || s.contains("credentials") || s.contains("password") {
+                        errorMessage = "Incorrect password. Please try again."
+                    } else {
+                        errorMessage = "Couldn't verify your password right now. Check your connection and try again."
+                    }
+                    return
+                }
             }
+            // OAuth users skip re-auth — their JWT is already proof of ownership.
+            // The "Type DELETE" gate above is the extra-friction safeguard.
+
+            // 2. Delete the user's knots and listings before removing the auth user.
+            if let userID = supabase.auth.currentUser?.id {
+                // Hard-delete all knots created by this user
+                try? await supabase
+                    .from("knots")
+                    .delete()
+                    .eq("creator_id", value: userID)
+                    .execute()
+                // Hard-delete all shop listings owned by this user
+                try? await supabase
+                    .from("shop_listings")
+                    .delete()
+                    .eq("seller_id", value: userID)
+                    .execute()
+            }
+
+            // 3. Call the delete-account Edge Function to hard-delete the auth user.
+            do {
+                let session = try await supabase.auth.session
+                var req = URLRequest(url: URL(string: "\(Configuration.supabaseURL)/functions/v1/delete-account")!)
+                req.httpMethod = "POST"
+                req.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                let (_, response) = try await URLSession.shared.data(for: req)
+                guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                    errorMessage = "Account deletion failed on the server. Please try again."
+                    return
+                }
+            } catch {
+                errorMessage = "Network error while deleting your account. Please try again."
+                return
+            }
+
+            // 4. Locally tear down state. The server already invalidated the user.
+            try? await supabase.auth.signOut(scope: .local)
+            profile.clearAllData()
+            isDeleted = true
         }
     }
 }

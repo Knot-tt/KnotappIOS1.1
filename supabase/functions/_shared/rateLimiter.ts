@@ -15,8 +15,15 @@ import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 export const RL = {
   // Financial operations — tight limits
   CREATE_ORDER:             { endpoint: "create-order",              maxRequests: 5,  windowSeconds: 300  },
+  CREATE_KNOT_PAYMENT:      { endpoint: "create-knot-payment",       maxRequests: 5,  windowSeconds: 300  },
   RELEASE_ESCROW:           { endpoint: "release-escrow",            maxRequests: 10, windowSeconds: 300  },
+  CANCEL_ORDER:             { endpoint: "cancel-order",              maxRequests: 10, windowSeconds: 300  },
+  DISPUTE_ORDER:            { endpoint: "dispute-order",             maxRequests: 5,  windowSeconds: 300  },
   ATTACH_PAYMENT_METHOD:    { endpoint: "attach-stripe-payment-method", maxRequests: 3, windowSeconds: 600 },
+
+  // Order coordination — moderate limits
+  PROPOSE_MEETUP:           { endpoint: "propose-meetup",            maxRequests: 20, windowSeconds: 60   },
+  ACCEPT_MEETUP:            { endpoint: "accept-meetup",             maxRequests: 20, windowSeconds: 60   },
 
   // Moderation operations — moderate limits
   APPROVE_JOIN_REQUEST:     { endpoint: "approve-join-request",      maxRequests: 20, windowSeconds: 60   },

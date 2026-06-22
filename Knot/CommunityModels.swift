@@ -21,23 +21,10 @@ enum AgeGroup: String, CaseIterable, Codable {
 
 // MARK: - Payment Type
 enum KnotPaymentType: String, CaseIterable {
-    case free      = "Free"
-    case perSession = "Per Session"
-    case oneTime   = "One Time"
-}
-
-// MARK: - Form Question
-struct FormQuestion: Identifiable, Hashable {
-    enum QuestionType: String, CaseIterable {
-        case openEnded = "Open Ended"
-        case mcq       = "Multiple Choice"
-    }
-
-    var id       = UUID()
-    var type     : QuestionType = .openEnded
-    var prompt   : String       = ""
-    var options  : [String]     = ["Option 1", "Option 2"]
-    var required : Bool         = true
+    case free       = "Free"
+    case join       = "Join"       // new default — pay to join
+    case perSession = "Per Session" // legacy
+    case oneTime    = "One Time"   // legacy
 }
 
 // MARK: - Join Request
@@ -48,7 +35,6 @@ struct JoinRequest: Identifiable {
     var dbID          : UUID?         // Supabase row id
     var applicantID   : UUID?         // Supabase applicant user id
     let applicantName : String
-    var answers       : [UUID: String] = [:]
     var submittedAt   : Date = Date()
     var status        : Status = .pending
 }
@@ -96,6 +82,10 @@ struct CommunityGroup: Identifiable {
     var memberCount       : Int
     var category          : String
     var location          : String
+    /// Creator's user UUID. Used as the source of truth for "who made this knot".
+    /// `adminName` is a denormalised display string that must be kept in sync with the
+    /// creator's current profile name — see UserProfile.refreshOwnKnotAdminNames().
+    var creatorID                  : UUID?           = nil
     var adminName                  : String          = "Unknown"
     var maxMembers                 : Int?            = nil
     var requiresApproval           : Bool            = false
@@ -109,10 +99,26 @@ struct CommunityGroup: Identifiable {
     var isPaid            : Bool            = false
     var paymentType       : KnotPaymentType = .free
     var price             : Int             = 0
-    var joinFormQuestions : [FormQuestion]  = []
-    var memberNames       : [String]       = []   // non-admin members
-    var coAdminNames      : [String]       = []   // co-admins (not the main admin)
-    var memberUUIDs       : [String: UUID] = [:]  // name → UUID for all members (used for creator transfer)
+    var memberNames       : [String]       = []   // non-admin members — DISPLAY ONLY
+    var coAdminNames      : [String]       = []   // co-admins — DISPLAY ONLY
+    var coAdminIDs        : Set<UUID>      = []   // co-admin IDENTITY — used for privilege checks (survives renames)
+    var memberUUIDs       : [String: UUID]  = [:]  // name → UUID lookup for member rows (display layer)
+    var memberLastPaidAt  : [UUID: Date]    = [:]  // member UUID → last paid timestamp
+
+    // ── Ratings ──────────────────────────────────────────────────────────
+    // Maintained server-side on the knots row (rating_sum / rating_count).
+    var ratingSum         : Int             = 0
+    var ratingCount       : Int             = 0
+
+    /// Raw mean of all star ratings (0 if none yet).
+    var averageRating: Double {
+        ratingCount > 0 ? Double(ratingSum) / Double(ratingCount) : 0
+    }
+
+    /// Average snapped to the nearest 0.5 — what the 5-star template displays.
+    var roundedRating: Double {
+        (averageRating * 2).rounded() / 2
+    }
 
     init(
         id               : UUID            = UUID(),
@@ -122,6 +128,7 @@ struct CommunityGroup: Identifiable {
         memberCount      : Int,
         category         : String,
         location         : String,
+        creatorID                  : UUID?           = nil,
         adminName                  : String          = "Unknown",
         maxMembers                 : Int?            = nil,
         requiresApproval           : Bool            = false,
@@ -135,7 +142,6 @@ struct CommunityGroup: Identifiable {
         isPaid           : Bool            = false,
         paymentType      : KnotPaymentType = .free,
         price            : Int             = 0,
-        joinFormQuestions: [FormQuestion]  = [],
         memberNames      : [String]        = [],
         coAdminNames     : [String]        = []
     ) {
@@ -146,6 +152,7 @@ struct CommunityGroup: Identifiable {
         self.memberCount       = memberCount
         self.category          = category
         self.location          = location
+        self.creatorID         = creatorID
         self.adminName         = adminName
         self.maxMembers        = maxMembers
         self.requiresApproval           = requiresApproval
@@ -159,7 +166,6 @@ struct CommunityGroup: Identifiable {
         self.isPaid            = isPaid
         self.paymentType       = paymentType
         self.price             = price
-        self.joinFormQuestions = joinFormQuestions
         self.memberNames       = memberNames
         self.coAdminNames      = coAdminNames
     }

@@ -9,7 +9,7 @@ struct SettingEntry: Identifiable {
 }
 
 let allSettings: [SettingEntry] = [
-    SettingEntry(id: "editProfile",    name: "Edit Profile",       icon: "person.fill",                  keywords: ["edit", "profile", "name", "bio", "photo", "picture", "address", "description"]),
+    SettingEntry(id: "editProfile",    name: "Edit Profile",       icon: "person.fill",                  keywords: ["edit", "profile", "name", "bio", "photo", "picture", "description"]),
     SettingEntry(id: "notifications",  name: "Notifications",      icon: "bell.fill",                    keywords: ["notification", "notifications", "alert", "push", "buzz", "remind"]),
     SettingEntry(id: "private",        name: "Private Account",    icon: "lock.fill",                    keywords: ["private", "public", "account", "lock", "hidden", "visibility"]),
     SettingEntry(id: "profileDisplay", name: "Profile Display",    icon: "eye.fill",                     keywords: ["display", "show", "hide", "profile", "listing", "knot", "connection", "visible"]),
@@ -35,6 +35,7 @@ struct SearchView: View {
     @State private var selectedGroup     : CommunityGroup? = nil
     @State private var selectedListing   : ShopListing?    = nil
     @State private var selectedPerson    : String?         = nil
+    @State private var selectedPersonID  : UUID?           = nil  // companion UUID for selectedPerson
     @State private var selectedAlert     : Announcement?   = nil
     @State private var selectedSetting   : SettingEntry?   = nil
     @Environment(\.dismiss) var dismiss
@@ -130,18 +131,19 @@ struct SearchView: View {
 
                 // ── Search bar ────────────────────────────────────────────
                 HStack {
-                    Image(systemName: "magnifyingglass").foregroundColor(.gray)
+                    Image(systemName: "magnifyingglass").foregroundColor(.secondary)
                     TextField("Search people, knots, messages, settings…", text: $searchText)
                         .autocorrectionDisabled()
                     if !searchText.isEmpty {
                         Button(action: { searchText = "" }) {
-                            Image(systemName: "xmark.circle.fill").foregroundColor(Color(.systemGray3))
+                            Image(systemName: "xmark.circle.fill").foregroundColor(Color.knotMuted)
                         }
                     }
                 }
                 .padding(12)
-                .background(Color(.systemGray6))
+                .background(Color.knotSurface)
                 .cornerRadius(12)
+                .knotSurfaceBorder(cornerRadius: 12)
                 .padding(.horizontal)
                 .padding(.top, 8)
                 .padding(.bottom, 12)
@@ -150,18 +152,18 @@ struct SearchView: View {
                 if searchText.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Suggestions")
-                            .font(.caption).foregroundColor(.gray).padding(.horizontal)
+                            .font(.caption).foregroundColor(.secondary).padding(.horizontal)
 
                         VStack(spacing: 0) {
                             ForEach(suggestions, id: \.self) { suggestion in
                                 Button(action: { searchText = suggestion }) {
                                     HStack(spacing: 12) {
                                         Image(systemName: "magnifyingglass")
-                                            .foregroundColor(Color(.systemGray3)).frame(width: 20)
-                                        Text(suggestion).font(.subheadline).foregroundColor(.black)
+                                            .foregroundColor(Color.knotMuted).frame(width: 20)
+                                        Text(suggestion).font(.subheadline).foregroundColor(.primary)
                                         Spacer()
                                         Image(systemName: "arrow.up.left")
-                                            .font(.caption).foregroundColor(Color(.systemGray3))
+                                            .font(.caption).foregroundColor(Color.knotMuted)
                                     }
                                     .padding(.horizontal, 16).padding(.vertical, 12)
                                 }
@@ -170,8 +172,8 @@ struct SearchView: View {
                                 }
                             }
                         }
-                        .background(Color.white).cornerRadius(14)
-                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(.systemGray4), lineWidth: 1))
+                        .background(Color.knotSurface).cornerRadius(14)
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.knotBorder, lineWidth: 1))
                         .padding(.horizontal)
                     }
                     Spacer()
@@ -181,11 +183,11 @@ struct SearchView: View {
                     Spacer()
                     VStack(spacing: 10) {
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 36)).foregroundColor(Color(.systemGray3))
+                            .font(.system(size: 36)).foregroundColor(Color.knotMuted)
                         Text("No results for \"\(searchText)\"")
-                            .font(.subheadline).foregroundColor(Color(.systemGray3))
+                            .font(.subheadline).foregroundColor(Color.knotMuted)
                         Text("Try searching for a person's name, message, listing, knot, alert, or setting")
-                            .font(.caption).foregroundColor(Color(.systemGray4))
+                            .font(.caption).foregroundColor(Color.knotMuted)
                             .multilineTextAlignment(.center).padding(.horizontal, 40)
                     }
                     Spacer()
@@ -198,10 +200,15 @@ struct SearchView: View {
                         if !peopleResults.isEmpty {
                             Section("People") {
                                 ForEach(peopleResults, id: \.self) { person in
-                                    Button(action: { selectedPerson = person }) {
+                                    Button(action: {
+                                        selectedPerson   = person
+                                        // Resolve UUID from connectionProfiles (keyed UUID→name) so
+                                        // UserProfileView fetches by ID instead of name-searching.
+                                        selectedPersonID = profile.connectionProfiles.first(where: { $0.value == person })?.key
+                                    }) {
                                         SearchRow(
                                             icon: "person.circle.fill",
-                                            iconColor: .black,
+                                            iconColor: .primary,
                                             title: person,
                                             subtitle: profile.connections.contains(person) ? "Connected" : nil
                                         )
@@ -217,7 +224,7 @@ struct SearchView: View {
                                     Button(action: { selectedGroup = group }) {
                                         SearchRow(
                                             icon: group.imageName,
-                                            iconColor: .black,
+                                            iconColor: .primary,
                                             title: group.name,
                                             subtitle: group.category
                                         )
@@ -233,7 +240,7 @@ struct SearchView: View {
                                     Button(action: { selectedListing = listing }) {
                                         SearchRow(
                                             icon: listing.type.icon,
-                                            iconColor: listing.type == .service ? .blue : listing.type == .advertisement ? .orange : .black,
+                                            iconColor: listing.type == .service ? Color.knotAccent : listing.type == .advertisement ? .orange : .primary,
                                             title: listing.name,
                                             subtitle: "\(listing.sellerName) · \(listing.category.rawValue)"
                                         )
@@ -253,7 +260,7 @@ struct SearchView: View {
                                     }) {
                                         SearchRow(
                                             icon: match.conversation.isGroup ? "person.3.fill" : "message.fill",
-                                            iconColor: match.conversation.isGroup ? Color(.systemGray) : .black,
+                                            iconColor: match.conversation.isGroup ? Color(.systemGray) : .primary,
                                             title: match.conversation.displayName,
                                             subtitle: match.snippet.isEmpty ? nil : match.snippet
                                         )
@@ -269,7 +276,7 @@ struct SearchView: View {
                                     Button(action: { selectedAlert = alert }) {
                                         SearchRow(
                                             icon: "bell.fill",
-                                            iconColor: .black,
+                                            iconColor: .primary,
                                             title: alert.title,
                                             subtitle: alert.sender
                                         )
@@ -285,7 +292,7 @@ struct SearchView: View {
                                     Button(action: { selectedSetting = entry }) {
                                         SearchRow(
                                             icon: entry.icon,
-                                            iconColor: .black,
+                                            iconColor: .primary,
                                             title: entry.name,
                                             subtitle: "Settings"
                                         )
@@ -296,9 +303,10 @@ struct SearchView: View {
 
                     }
                     .listStyle(.insetGrouped)
+                    .scrollDismissesKeyboard(.interactively)
                 }
             }
-            .background(Color(.systemGray6).ignoresSafeArea())
+            .background(Color.knotBackground.ignoresSafeArea())
             .navigationTitle("Search")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -311,7 +319,7 @@ struct SearchView: View {
             .sheet(item: $selectedGroup)   { KnotDetailView(group: $0).environment(profile) }
             .sheet(item: $selectedListing) { ShopItemDetailView(listing: $0).environment(profile) }
             .sheet(item: $selectedAlert)   { AnnouncementDetailView(announcement: $0) }
-            .sheet(item: $selectedPerson)  { UserProfileView(name: $0).environment(profile) }
+            .sheet(item: $selectedPerson)  { UserProfileView(name: $0, userID: selectedPersonID).environment(profile) }
             .sheet(item: $selectedSetting) { entry in
                 SettingDestinationView(entry: entry).environment(profile)
             }
@@ -333,13 +341,13 @@ struct SearchRow: View {
                 Image(systemName: icon).font(.system(size: 16)).foregroundColor(iconColor)
             }
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.subheadline).foregroundColor(.black)
+                Text(title).font(.subheadline).foregroundColor(.primary)
                 if let sub = subtitle {
-                    Text(sub).font(.caption).foregroundColor(.gray).lineLimit(1)
+                    Text(sub).font(.caption).foregroundColor(.secondary).lineLimit(1)
                 }
             }
             Spacer()
-            Image(systemName: "chevron.right").font(.caption2).foregroundColor(Color(.systemGray3))
+            Image(systemName: "chevron.right").font(.caption2).foregroundColor(Color.knotMuted)
         }
         .padding(.vertical, 2)
     }
@@ -363,14 +371,17 @@ struct SettingDestinationView: View {
                 case "help":           HelpSupportView()
                 case "faq":            FAQView()
                 case "feedback":       FeedbackView()
-                case "terms":          WebContentView(title: "Terms of Service")
-                case "policyPrivacy":  WebContentView(title: "Privacy Policy")
+                case "terms":          LegalDocumentView(kind: .terms)
+                case "policyPrivacy":  LegalDocumentView(kind: .privacy)
                 case "private":
                     List {
                         Section {
                             Toggle("Private Account", isOn: Binding(
                                 get: { profile.isPrivateAccount },
-                                set: { profile.isPrivateAccount = $0 }
+                                set: {
+                                    profile.isPrivateAccount = $0
+                                    profile.saveProfilePreferencesToSupabase()
+                                }
                             ))
                         } footer: {
                             Text("When your account is private, only connections can see your Knots and listings.")

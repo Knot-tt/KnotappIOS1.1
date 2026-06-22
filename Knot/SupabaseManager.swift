@@ -40,9 +40,14 @@ enum ProfileService {
     static func fetchMultiple(userIDs: [UUID]) async throws -> [DBProfile] {
         guard !userIDs.isEmpty else { return [] }
         let idList = userIDs.map { $0.uuidString.lowercased() }.joined(separator: ",")
+        // The column list MUST contain every non-optional field on DBProfile —
+        // notably `onboarding_complete` and `has_seen_welcome`. Omitting either
+        // makes EVERY row fail to decode (silent failure), which throws here and
+        // takes loadKnots / loadConversations down with it. Address columns are
+        // deliberately excluded (PII; they aren't on DBProfile anyway).
         return try await supabase
             .from("profiles")
-            .select("id, name, bio, profile_image, is_private, show_knots, show_listings, show_connections, street, city, postal_code, country, created_at, updated_at")
+            .select("id, name, bio, profile_image, is_private, show_knots, show_listings, show_connections, onboarding_complete, has_seen_welcome, created_at, updated_at")
             .filter("id", operator: "in", value: "(\(idList))")
             .execute()
             .value
@@ -86,6 +91,58 @@ enum ProfileService {
         try await supabase
             .from("profiles")
             .update(["onboarding_complete": true])
+            .eq("id", value: userID)
+            .execute()
+    }
+
+    /// Update just the display name on the current user's profile.
+    static func updateName(_ name: String) async throws {
+        guard let userID = supabase.auth.currentUser?.id else { return }
+        struct NameUpdate: Encodable { let name: String }
+        try await supabase
+            .from("profiles")
+            .update(NameUpdate(name: name))
+            .eq("id", value: userID)
+            .execute()
+    }
+
+    /// Persist the user's date of birth (`profiles.birthday` is a DATE column).
+    static func saveBirthday(_ dob: Date) async throws {
+        guard let userID = supabase.auth.currentUser?.id else { return }
+        struct BirthdayUpdate: Encodable { let birthday: String }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        try await supabase
+            .from("profiles")
+            .update(BirthdayUpdate(birthday: formatter.string(from: dob)))
+            .eq("id", value: userID)
+            .execute()
+    }
+
+    /// Replace the user's interests with `names` (`user_interests` is one row per interest).
+    static func saveInterests(_ names: [String]) async throws {
+        guard let userID = supabase.auth.currentUser?.id else { return }
+        // Clear existing selection, then insert the new one.
+        try await supabase
+            .from("user_interests")
+            .delete()
+            .eq("user_id", value: userID)
+            .execute()
+        guard !names.isEmpty else { return }
+        struct InterestInsert: Encodable { let user_id: UUID; let interest: String }
+        let rows = names.map { InterestInsert(user_id: userID, interest: $0) }
+        try await supabase.from("user_interests").insert(rows).execute()
+    }
+
+    /// Mark the one-time welcome screen as seen (`profiles.has_seen_welcome`).
+    static func markWelcomeSeen() async throws {
+        guard let userID = supabase.auth.currentUser?.id else { return }
+        struct WelcomeUpdate: Encodable { let has_seen_welcome: Bool }
+        try await supabase
+            .from("profiles")
+            .update(WelcomeUpdate(has_seen_welcome: true))
             .eq("id", value: userID)
             .execute()
     }
@@ -166,9 +223,12 @@ enum ProfileService {
         // Explicit column list — never expose stripe_customer_id, street, city,
         // postal_code, or country to search callers (search is for finding people,
         // not reading their PII). RLS still applies on top of this.
+        // NOTE: must include onboarding_complete + has_seen_welcome — they're
+        // non-optional on DBProfile, so omitting them makes every row fail to
+        // decode and search silently returns nothing.
         try await supabase
             .from("profiles")
-            .select("id, name, bio, profile_image, is_private, show_knots, show_listings, show_connections, created_at, updated_at")
+            .select("id, name, bio, profile_image, is_private, show_knots, show_listings, show_connections, onboarding_complete, has_seen_welcome, created_at, updated_at")
             .ilike("name", pattern: "%\(query)%")
             .limit(limit)
             .execute()
@@ -260,6 +320,52 @@ enum ConnectionService {
 
 // MARK: - KnotService
 // Phase 3 — fully implemented.
+
+enum KnotRatingService {
+
+    /// Insert or update the current user's star rating for a knot.
+    /// The `knot_ratings_sync` DB trigger keeps knots.rating_sum / rating_count current.
+    static func submit(knotID: UUID, rating: Int) async throws {
+        guard let uid = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+        struct RatingUpsert: Encodable {
+            let knot_id: UUID
+            let user_id: UUID
+            let rating: Int
+        }
+        try await supabase
+            .from("knot_ratings")
+            .upsert(RatingUpsert(knot_id: knotID, user_id: uid, rating: rating),
+                    onConflict: "knot_id,user_id")
+            .execute()
+    }
+
+    /// The current user's existing rating for a knot (1–5), or nil if not yet rated.
+    static func fetchMine(knotID: UUID) async throws -> Int? {
+        guard let uid = supabase.auth.currentUser?.id else { return nil }
+        let rows: [DBKnotRating] = try await supabase
+            .from("knot_ratings")
+            .select()
+            .eq("knot_id", value: knotID)
+            .eq("user_id", value: uid)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first?.rating
+    }
+
+    /// Re-fetch a single knot's aggregate rating columns (e.g. after submitting).
+    static func fetchAggregate(knotID: UUID) async throws -> (sum: Int, count: Int) {
+        let rows: [DBKnot] = try await supabase
+            .from("knots")
+            .select()
+            .eq("id", value: knotID)
+            .limit(1)
+            .execute()
+            .value
+        guard let k = rows.first else { return (0, 0) }
+        return (k.ratingSum, k.ratingCount)
+    }
+}
 
 enum KnotService {
 
@@ -482,6 +588,38 @@ enum KnotService {
             .eq("user_id", value: currentUserID)
             .execute()
     }
+
+    /// Promote a member to co-admin (`isAdmin: true`) or demote back to member.
+    /// `knot_member_role` enum values: member, co_admin, creator.
+    static func setCoAdmin(knotID: UUID, userID: UUID, isAdmin: Bool) async throws {
+        struct RoleUpdate: Encodable { let role: String }
+        try await supabase
+            .from("knot_members")
+            .update(RoleUpdate(role: isAdmin ? "co_admin" : "member"))
+            .eq("knot_id", value: knotID)
+            .eq("user_id", value: userID)
+            .execute()
+    }
+
+    /// Remove a member from a knot.
+    static func kickMember(knotID: UUID, userID: UUID) async throws {
+        try await supabase
+            .from("knot_members")
+            .delete()
+            .eq("knot_id", value: knotID)
+            .eq("user_id", value: userID)
+            .execute()
+    }
+
+    /// Exact count of the knots a user belongs to, straight from the server.
+    static func countMemberships(userID: UUID) async throws -> Int {
+        let response = try await supabase
+            .from("knot_members")
+            .select("knot_id", head: true, count: .exact)
+            .eq("user_id", value: userID)
+            .execute()
+        return response.count ?? 0
+    }
 }
 
 
@@ -560,6 +698,20 @@ enum MessagingService {
             .limit(limit)
             .execute()
             .value
+    }
+
+    /// Fetch only the newest message for a conversation.
+    static func fetchLatestMessage(conversationID: UUID) async throws -> DBMessage? {
+        guard supabase.auth.currentUser != nil else { throw AuthError.sessionMissing }
+        let rows: [DBMessage] = try await supabase
+            .from("messages")
+            .select()
+            .eq("conversation_id", value: conversationID)
+            .order("created_at", ascending: false)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
     }
 
     /// Send a text message as the current user.
@@ -694,12 +846,200 @@ enum MessagingService {
             .eq("user_id", value: userID)
             .execute()
     }
+
+    /// Find the existing knot group chat or create it, via a SECURITY DEFINER RPC.
+    /// Returns the conversation UUID. (See CLAUDE.md — never generate this locally.)
+    static func findOrCreateKnotChat(knotID: UUID, knotName: String) async throws -> UUID {
+        struct Params: Encodable { let p_knot_id: UUID; let p_knot_name: String }
+        return try await supabase
+            .rpc("find_or_create_knot_chat", params: Params(p_knot_id: knotID, p_knot_name: knotName))
+            .execute()
+            .value
+    }
+
+    /// Send an image message: upload the photo to Storage, then insert the message row.
+    static func sendImage(_ image: UIImage, caption: String = "", conversationID: UUID) async throws -> DBMessage {
+        guard let me = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+        guard let data = image.jpegData(compressionQuality: 0.75) else {
+            throw NSError(domain: "MessagingService", code: -2,
+                          userInfo: [NSLocalizedDescriptionKey: "Could not encode image."])
+        }
+        let path = "\(conversationID.uuidString.lowercased())/\(UUID().uuidString.lowercased()).jpg"
+        try await supabase.storage
+            .from(Bucket.messageImages)
+            .upload(path, data: data, options: FileOptions(contentType: "image/jpeg", upsert: true))
+        let url = try supabase.storage
+            .from(Bucket.messageImages)
+            .getPublicURL(path: path)
+
+        struct ImageMessageInsert: Encodable {
+            let conversation_id: UUID
+            let sender_id      : UUID
+            let text           : String
+            let image_url      : String
+            let status         : String
+        }
+        let inserted: [DBMessage] = try await supabase
+            .from("messages")
+            .insert(
+                ImageMessageInsert(conversation_id: conversationID, sender_id: me,
+                                   text: caption, image_url: url.absoluteString, status: "sent"),
+                returning: .representation
+            )
+            .execute()
+            .value
+        guard let msg = inserted.first else {
+            throw NSError(domain: "MessagingService", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "Message insert returned no row"])
+        }
+        return msg
+    }
+
+    /// Upload a recorded video clip + its poster frame and insert a video message.
+    /// The clip and poster both live in the `message-images` bucket (its RLS already
+    /// scopes uploads to chat participants); `image_url` is the poster, `video_url`
+    /// the clip.
+    static func sendVideo(fileURL: URL, poster: UIImage, caption: String = "",
+                          conversationID: UUID) async throws -> DBMessage {
+        guard let me = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+        let videoData = try Data(contentsOf: fileURL)
+        guard let posterData = poster.jpegData(compressionQuality: 0.7) else {
+            throw NSError(domain: "MessagingService", code: -2,
+                          userInfo: [NSLocalizedDescriptionKey: "Could not encode video poster."])
+        }
+        let base = "\(conversationID.uuidString.lowercased())/\(UUID().uuidString.lowercased())"
+        let videoPath  = "\(base).mov"
+        let posterPath = "\(base).jpg"
+
+        try await supabase.storage.from(Bucket.messageImages)
+            .upload(videoPath, data: videoData,
+                    options: FileOptions(contentType: "video/quicktime", upsert: true))
+        try await supabase.storage.from(Bucket.messageImages)
+            .upload(posterPath, data: posterData,
+                    options: FileOptions(contentType: "image/jpeg", upsert: true))
+
+        let videoURL  = try supabase.storage.from(Bucket.messageImages).getPublicURL(path: videoPath)
+        let posterURL = try supabase.storage.from(Bucket.messageImages).getPublicURL(path: posterPath)
+
+        struct VideoMessageInsert: Encodable {
+            let conversation_id: UUID
+            let sender_id      : UUID
+            let text           : String
+            let image_url      : String
+            let video_url      : String
+            let status         : String
+        }
+        let inserted: [DBMessage] = try await supabase
+            .from("messages")
+            .insert(
+                VideoMessageInsert(conversation_id: conversationID, sender_id: me,
+                                   text: caption, image_url: posterURL.absoluteString,
+                                   video_url: videoURL.absoluteString, status: "sent"),
+                returning: .representation
+            )
+            .execute()
+            .value
+        guard let msg = inserted.first else {
+            throw NSError(domain: "MessagingService", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "Video message insert returned no row"])
+        }
+        return msg
+    }
+
+    /// Mark the conversation read for the current user (updates `last_read_at`).
+    static func markConversationRead(conversationID: UUID) async throws {
+        guard let me = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+        struct ReadUpdate: Encodable { let last_read_at: String }
+        try await supabase
+            .from("conversation_participants")
+            .update(ReadUpdate(last_read_at: ISO8601DateFormatter().string(from: Date())))
+            .eq("conversation_id", value: conversationID)
+            .eq("user_id", value: me)
+            .execute()
+    }
+
+    /// Rename a group conversation.
+    static func renameGroup(conversationID: UUID, newName: String) async throws {
+        struct NameUpdate: Encodable { let group_name: String }
+        try await supabase
+            .from("conversations")
+            .update(NameUpdate(group_name: newName))
+            .eq("id", value: conversationID)
+            .execute()
+    }
+
+    /// Update a group conversation's name and description in one write.
+    static func updateGroupInfo(conversationID: UUID, name: String, description: String) async throws {
+        struct InfoUpdate: Encodable { let group_name: String; let group_description: String }
+        try await supabase
+            .from("conversations")
+            .update(InfoUpdate(group_name: name, group_description: description))
+            .eq("id", value: conversationID)
+            .execute()
+    }
+
+    /// Upload a group conversation image to Storage and persist its URL. Returns the URL.
+    @discardableResult
+    static func uploadGroupImage(conversationID: UUID, _ image: UIImage) async throws -> String {
+        guard let data = image.jpegData(compressionQuality: 0.75) else {
+            throw NSError(domain: "MessagingService", code: -2,
+                          userInfo: [NSLocalizedDescriptionKey: "Could not encode image."])
+        }
+        let path = "\(conversationID.uuidString.lowercased())/group.jpg"
+        try await supabase.storage
+            .from(Bucket.messageImages)
+            .upload(path, data: data, options: FileOptions(contentType: "image/jpeg", upsert: true))
+        let url = try supabase.storage
+            .from(Bucket.messageImages)
+            .getPublicURL(path: path)
+        struct ImageUpdate: Encodable { let group_image_url: String }
+        try await supabase
+            .from("conversations")
+            .update(ImageUpdate(group_image_url: url.absoluteString))
+            .eq("id", value: conversationID)
+            .execute()
+        return url.absoluteString
+    }
+
+    /// Re-join a conversation the current user previously left/hid (clears `has_left`).
+    static func reactivateConversationForCurrentUser(conversationID: UUID) async throws {
+        guard let me = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+        struct Reactivate: Encodable { let has_left: Bool }
+        try await supabase
+            .from("conversation_participants")
+            .update(Reactivate(has_left: false))
+            .eq("conversation_id", value: conversationID)
+            .eq("user_id", value: me)
+            .execute()
+    }
 }
 
 
 // MARK: - ShopService
 
 enum ShopService {
+
+    private static func preparedListingImageData(_ image: UIImage) -> Data? {
+        guard image.size.width > 0, image.size.height > 0 else { return nil }
+        let maxDimension: CGFloat = 1600
+        let originalSize = image.size
+        let scale = min(1, maxDimension / max(originalSize.width, originalSize.height))
+        let targetSize = CGSize(width: originalSize.width * scale, height: originalSize.height * scale)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+
+        return autoreleasepool {
+            let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
+            let resized = renderer.image { _ in
+                image.draw(in: CGRect(origin: .zero, size: targetSize))
+            }
+
+            if let compressed = resized.jpegData(compressionQuality: 0.72) {
+                return compressed
+            }
+            return image.jpegData(compressionQuality: 0.6)
+        }
+    }
 
     private struct ListingInsert: Encodable {
         let id          : UUID
@@ -713,6 +1053,9 @@ enum ShopService {
         let priceCents  : Int
         let imageUrls   : [String]
         let isActive    : Bool
+        let isRecurring : Bool
+        let acceptsCash : Bool
+        let acceptsCard : Bool
 
         enum CodingKeys: String, CodingKey {
             case id, name, description, link, condition, category
@@ -721,6 +1064,9 @@ enum ShopService {
             case priceCents  = "price_cents"
             case imageUrls   = "image_urls"
             case isActive    = "is_active"
+            case isRecurring = "is_recurring"
+            case acceptsCash = "accepts_cash"
+            case acceptsCard = "accepts_card"
         }
     }
 
@@ -735,36 +1081,66 @@ enum ShopService {
             .value
     }
 
+    static func fetch(listingID: UUID) async throws -> DBShopListing? {
+        let rows: [DBShopListing] = try await supabase
+            .from("shop_listings")
+            .select()
+            .eq("id", value: listingID)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
+    /// Exact count of a user's ACTIVE listings, straight from the server.
+    /// Used for profile stats so the number isn't limited by what the viewer
+    /// happens to have cached in the public feed.
+    static func countActive(sellerID: UUID) async throws -> Int {
+        let response = try await supabase
+            .from("shop_listings")
+            .select("id", head: true, count: .exact)
+            .eq("seller_id", value: sellerID)
+            .eq("is_active", value: true)
+            .execute()
+        return response.count ?? 0
+    }
+
     static func create(
-        type      : ListingType,
-        category  : ShopCategory,
-        condition : ItemCondition,
-        name      : String,
-        description: String,
-        link      : String,
-        price     : Int,
-        images    : [UIImage]
+        type        : ListingType,
+        category    : ShopCategory,
+        condition   : ItemCondition,
+        name        : String,
+        description : String,
+        link        : String,
+        price       : Int,
+        images      : [UIImage],
+        isRecurring : Bool = false,
+        acceptsCash : Bool = true,
+        acceptsCard : Bool = false
     ) async throws -> DBShopListing {
         guard let me = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
         let listingID = UUID()
+        let folder = listingID.uuidString.lowercased()
 
+        // Public URLs are deterministic — getPublicURL just builds a string and
+        // makes no network call, so we know every image's final URL before a
+        // single byte is uploaded.
         var imageURLs: [String] = []
-        for (i, img) in images.enumerated() {
-            guard let data = img.jpegData(compressionQuality: 0.8) else { continue }
-            let path = "\(listingID.uuidString.lowercased())/\(i).jpg"
-            do {
-                try await supabase.storage
-                    .from(Bucket.listingImages)
-                    .upload(path, data: data, options: FileOptions(contentType: "image/jpeg", upsert: true))
-                let url = try supabase.storage
-                    .from(Bucket.listingImages)
-                    .getPublicURL(path: path)
-                imageURLs.append(url.absoluteString)
-            } catch {
-                print("[ShopService] image upload failed at index \(i): \(error)")
-            }
+        imageURLs.reserveCapacity(images.count)
+        for i in images.indices {
+            let url = try supabase.storage
+                .from(Bucket.listingImages)
+                .getPublicURL(path: "\(folder)/\(i).jpg")
+            imageURLs.append(url.absoluteString)
         }
 
+        // Insert the listing row FIRST, before any Storage upload — exactly like
+        // KnotService.create / uploadKnotCoverImage (that flow never freezes).
+        //
+        // The reverse order (upload, then insert) intermittently deadlocks the
+        // Supabase client's auth/token layer: the upload succeeds, then the
+        // insert is never sent and "Post" hangs the app. Inserting first means
+        // the only network calls after the uploads are the uploads themselves.
         let insert = ListingInsert(
             id: listingID, sellerId: me,
             listingType: type.rawValue.lowercased(),
@@ -772,9 +1148,59 @@ enum ShopService {
             condition: condition.dbValue,
             name: name, description: description, link: link,
             priceCents: price * 100,
-            imageUrls: imageURLs, isActive: true
+            imageUrls: imageURLs, isActive: true,
+            isRecurring: isRecurring,
+            acceptsCash: acceptsCash,
+            acceptsCard: acceptsCard
         )
         try await supabase.from("shop_listings").insert(insert).execute()
+
+        // Now upload the image bytes. The row already exists, so these are the
+        // last network calls in this operation.
+        var failedIndexes: [Int] = []
+        for (i, image) in images.enumerated() {
+            let path = "\(folder)/\(i).jpg"
+            guard let data = preparedListingImageData(image) else {
+                print("[ShopService] image preparation failed at index \(i)")
+                failedIndexes.append(i)
+                continue
+            }
+            do {
+                try await supabase.storage
+                    .from(Bucket.listingImages)
+                    .upload(path, data: data, options: FileOptions(contentType: "image/jpeg", upsert: true))
+            } catch {
+                // Retry once for intermittent storage failures.
+                do {
+                    try await supabase.storage
+                        .from(Bucket.listingImages)
+                        .upload(path, data: data, options: FileOptions(contentType: "image/jpeg", upsert: true))
+                } catch {
+                    print("[ShopService] image upload failed at index \(i): \(error)")
+                    failedIndexes.append(i)
+                }
+            }
+        }
+
+        // If any upload failed the row now points at a missing file. Correct the
+        // stored URLs to the subset that actually uploaded. Done in a detached
+        // task so this clean-up can never block (or re-freeze) the post.
+        if !failedIndexes.isEmpty {
+            let survivingURLs = imageURLs.enumerated()
+                .filter { !failedIndexes.contains($0.offset) }
+                .map(\.element)
+            imageURLs = survivingURLs
+            Task.detached {
+                struct ImageURLsPatch: Encodable {
+                    let imageUrls: [String]
+                    enum CodingKeys: String, CodingKey { case imageUrls = "image_urls" }
+                }
+                _ = try? await supabase.from("shop_listings")
+                    .update(ImageURLsPatch(imageUrls: survivingURLs))
+                    .eq("id", value: listingID)
+                    .execute()
+            }
+        }
 
         return DBShopListing(
             id: listingID, sellerId: me,
@@ -784,8 +1210,73 @@ enum ShopService {
             name: name, description: description, link: link,
             priceCents: price * 100,
             imageUrls: imageURLs, isActive: true,
+            isRecurring: isRecurring,
+            acceptsCash: acceptsCash,
+            acceptsCard: acceptsCard,
             createdAt: Date(), updatedAt: Date()
         )
+    }
+
+    /// Update a listing's editable fields. Caller must own the listing (RLS enforces this).
+    /// Images are not touched here — sellers manage photos via a separate flow.
+    static func update(
+        listingID  : UUID,
+        type       : ListingType,
+        category   : ShopCategory,
+        condition  : ItemCondition,
+        name       : String,
+        description: String,
+        link       : String,
+        price      : Int
+    ) async throws {
+        struct ListingUpdate: Encodable {
+            let listing_type : String
+            let category     : String
+            let condition    : String
+            let name         : String
+            let description  : String
+            let link         : String
+            let price_cents  : Int
+        }
+        let payload = ListingUpdate(
+            listing_type: type.rawValue.lowercased(),
+            category    : category.dbValue,
+            condition   : condition.dbValue,
+            name        : name,
+            description : description,
+            link        : link,
+            price_cents : price * 100
+        )
+        try await supabase
+            .from("shop_listings")
+            .update(payload)
+            .eq("id", value: listingID)
+            .execute()
+    }
+
+    /// Fetch every listing the current user owns, regardless of active state.
+    /// Used to power a "My Listings" view that can show + restore soft-deleted rows.
+    static func fetchMine() async throws -> [DBShopListing] {
+        guard let me = supabase.auth.currentUser?.id else { return [] }
+        return try await supabase
+            .from("shop_listings")
+            .select()
+            .eq("seller_id", value: me)
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+    }
+
+    /// Restore a previously soft-deleted listing — the inverse of `delete(listingID:)`.
+    static func restore(listingID: UUID) async throws {
+        struct Reactivate: Encodable { let isActive: Bool
+            enum CodingKeys: String, CodingKey { case isActive = "is_active" }
+        }
+        try await supabase
+            .from("shop_listings")
+            .update(Reactivate(isActive: true))
+            .eq("id", value: listingID.uuidString.lowercased())
+            .execute()
     }
 
     static func delete(listingID: UUID) async throws {
@@ -801,24 +1292,193 @@ enum ShopService {
 }
 
 
+// MARK: - SettingsService
+// Notification preference persistence + blocked users.
+
+enum SettingsService {
+
+    struct NotificationPrefs: Codable {
+        var notifyKnots         : Bool
+        var notifyMessages      : Bool
+        var notifyAnnouncements : Bool
+        var notifyMarketplace   : Bool
+        enum CodingKeys: String, CodingKey {
+            case notifyKnots         = "notify_knots"
+            case notifyMessages      = "notify_messages"
+            case notifyAnnouncements = "notify_announcements"
+            case notifyMarketplace   = "notify_marketplace"
+        }
+    }
+
+    static func fetchNotificationPrefs() async throws -> NotificationPrefs? {
+        guard let userID = supabase.auth.currentUser?.id else { return nil }
+        let rows: [NotificationPrefs] = try await supabase
+            .from("user_settings")
+            .select("notify_knots, notify_messages, notify_announcements, notify_marketplace")
+            .eq("user_id", value: userID)
+            .execute()
+            .value
+        return rows.first
+    }
+
+    static func updateNotificationPrefs(_ prefs: NotificationPrefs) async throws {
+        guard let userID = supabase.auth.currentUser?.id else { return }
+        struct Payload: Encodable {
+            let user_id              : UUID
+            let notify_knots         : Bool
+            let notify_messages      : Bool
+            let notify_announcements : Bool
+            let notify_marketplace   : Bool
+            let updated_at           : Date
+        }
+        try await supabase.from("user_settings").upsert(Payload(
+            user_id: userID,
+            notify_knots: prefs.notifyKnots,
+            notify_messages: prefs.notifyMessages,
+            notify_announcements: prefs.notifyAnnouncements,
+            notify_marketplace: prefs.notifyMarketplace,
+            updated_at: Date()
+        ), onConflict: "user_id").execute()
+    }
+
+    // ── Blocked users ──────────────────────────────────────────────────────
+
+    static func fetchBlockedUserIDs() async throws -> [UUID] {
+        guard let userID = supabase.auth.currentUser?.id else { return [] }
+        struct Row: Decodable { let blocked_id: UUID }
+        let rows: [Row] = try await supabase
+            .from("blocked_users")
+            .select("blocked_id")
+            .eq("blocker_id", value: userID)
+            .execute()
+            .value
+        return rows.map(\.blocked_id)
+    }
+
+    static func block(userID toBlock: UUID) async throws {
+        guard let me = supabase.auth.currentUser?.id, me != toBlock else { return }
+        struct Insert: Encodable { let blocker_id, blocked_id: UUID }
+        try await supabase.from("blocked_users").insert(Insert(blocker_id: me, blocked_id: toBlock)).execute()
+    }
+
+    static func unblock(userID toUnblock: UUID) async throws {
+        guard let me = supabase.auth.currentUser?.id else { return }
+        try await supabase.from("blocked_users")
+            .delete()
+            .eq("blocker_id", value: me)
+            .eq("blocked_id", value: toUnblock)
+            .execute()
+    }
+
+    /// Returns true if `userID` has blocked the current user.
+    ///
+    /// Requires this RLS policy on the blocked_users table in Supabase:
+    ///   CREATE POLICY "users_can_check_if_blocked_by_others"
+    ///     ON blocked_users FOR SELECT
+    ///     USING (blocked_id = auth.uid());
+    ///
+    /// Without this policy the query returns empty (not an error), which is
+    /// treated as "not blocked" — safe fallback.
+    static func isBlockedBy(userID: UUID) async -> Bool {
+        guard let me = supabase.auth.currentUser?.id else { return false }
+        struct Row: Decodable { let blocked_id: UUID }
+        let rows: [Row] = (try? await supabase
+            .from("blocked_users")
+            .select("blocked_id")
+            .eq("blocker_id", value: userID)
+            .eq("blocked_id", value: me)
+            .limit(1)
+            .execute()
+            .value) ?? []
+        return !rows.isEmpty
+    }
+}
+
+
+// MARK: - ReportService
+// User / content reporting. Required by Apple App Store Review Guideline 1.2
+// for apps with user-generated content. Rows land in public.reports (RLS:
+// reporter_id = auth.uid()) for moderation review.
+
+enum ReportService {
+
+    /// File a report against another user, optionally tied to a conversation/message.
+    static func report(
+        userID reported: UUID?,
+        reason: String,
+        details: String?,
+        conversationID: UUID? = nil,
+        messageID: UUID? = nil
+    ) async throws {
+        guard let me = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+        struct Insert: Encodable {
+            let reporter_id: UUID
+            let reported_user_id: UUID?
+            let conversation_id: UUID?
+            let message_id: UUID?
+            let reason: String
+            let details: String?
+        }
+        try await supabase.from("reports").insert(Insert(
+            reporter_id: me,
+            reported_user_id: reported,
+            conversation_id: conversationID,
+            message_id: messageID,
+            reason: reason,
+            details: details?.isEmpty == true ? nil : details
+        )).execute()
+    }
+}
+
+
+// MARK: - Edge-function HTTP helper
+// Calls a Supabase Edge Function with the current user's JWT for auth.
+
+private func callEdgeFunction<Req: Encodable, Res: Decodable>(name: String, body: Req) async throws -> Res {
+    guard let session = try? await supabase.auth.session else {
+        throw AuthError.sessionMissing
+    }
+    let urlString = "\(Configuration.supabaseURL)/functions/v1/\(name)"
+    guard let url = URL(string: urlString) else {
+        throw NSError(domain: "EdgeFn", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid URL"])
+    }
+    var req = URLRequest(url: url)
+    req.httpMethod = "POST"
+    req.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.httpBody = try JSONEncoder().encode(body)
+    let (data, response) = try await URLSession.shared.data(for: req)
+    guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+        let msg = String(data: data, encoding: .utf8) ?? "Edge function failed"
+        throw NSError(domain: "EdgeFn", code: (response as? HTTPURLResponse)?.statusCode ?? 0,
+                      userInfo: [NSLocalizedDescriptionKey: msg])
+    }
+    return try JSONDecoder().decode(Res.self, from: data)
+}
+
+
 // MARK: - OrderService
 // Phase 7 — creates/releases go through Edge Functions; status transitions are direct DB UPDATEs.
 
 enum OrderService {
 
-    private struct CreateOrderPayload: Encodable {
-        let listingId      : String
-        let fulfilment     : String
-        let deliveryAddress: String?
-        let meetupLocation : String?
-        let meetupDateISO  : String?
-    }
-
-    private struct CreateOrderResponse: Decodable {
-        let orderId      : String
-        let clientSecret : String
-        let customerId   : String
-        let ephemeralKey : String
+    private static func notifyOtherParty(orderID: String, title: String, body: String) async {
+        guard let me = supabase.auth.currentUser?.id else { return }
+        do {
+            let rows: [DBOrder] = try await supabase
+                .from("orders")
+                .select()
+                .eq("id", value: orderID)
+                .limit(1)
+                .execute()
+                .value
+            guard let order = rows.first else { return }
+            let recipientID = order.buyerId == me ? order.sellerId : order.buyerId
+            guard recipientID != me else { return }
+            await NotificationManager.notify(userID: recipientID, title: title, body: body, target: "orders", orderID: orderID)
+        } catch {
+            print("[OrderService] notification lookup error: \(error)")
+        }
     }
 
     /// Fetch all orders where the current user is buyer or seller.
@@ -832,33 +1492,14 @@ enum OrderService {
             .value
     }
 
-    /// Calls the create-order Edge Function.
-    /// Returns (orderID, clientSecret) — clientSecret reserved for Stripe PaymentSheet integration.
-    static func createOrder(listingID: UUID, fulfilment: FulfilmentMethod, deliveryAddress: String, meetupLocation: String = "", meetupDate: Date? = nil) async throws -> (orderID: String, clientSecret: String, customerId: String, ephemeralKey: String) {
-        let isoFormatter = ISO8601DateFormatter()
-        let payload = CreateOrderPayload(
-            listingId      : listingID.uuidString.lowercased(),
-            fulfilment     : fulfilment.dbValue,
-            deliveryAddress: fulfilment == .delivery ? deliveryAddress : nil,
-            meetupLocation : fulfilment == .meetup ? meetupLocation : nil,
-            meetupDateISO  : meetupDate.map { isoFormatter.string(from: $0) }
-        )
-        let response: CreateOrderResponse = try await supabase.functions
-            .invoke("create-order", options: FunctionInvokeOptions(body: payload))
-        return (orderID: response.orderId, clientSecret: response.clientSecret, customerId: response.customerId, ephemeralKey: response.ephemeralKey)
-    }
-
-    /// Calls the release-escrow Edge Function, which captures the Stripe PaymentIntent
-    /// and marks the order complete in one atomic operation.
-    static func releaseEscrow(orderID: String) async throws {
-        struct Payload: Encodable { let orderId: String }
-        struct Response: Decodable { let success: Bool }
-        let _: Response = try await supabase.functions
-            .invoke("release-escrow", options: FunctionInvokeOptions(body: Payload(orderId: orderID)))
-    }
-
     /// Proposes or counter-proposes a meetup via edge function.
-    static func proposeMeetup(orderID: String, location: String, date: Date, proposedBy: String) async throws {
+    static func proposeMeetup(
+        orderID: String,
+        location: String,
+        date: Date,
+        proposedBy: String,
+        resetProgressToPending: Bool = false
+    ) async throws {
         struct Payload: Encodable {
             let orderId   : String
             let location  : String
@@ -867,42 +1508,158 @@ enum OrderService {
         }
         struct Response: Decodable { let success: Bool }
         let iso = ISO8601DateFormatter()
-        let _: Response = try await supabase.functions
-            .invoke("propose-meetup", options: FunctionInvokeOptions(
-                body: Payload(orderId: orderID, location: location,
-                              dateISO: iso.string(from: date), proposedBy: proposedBy)
-            ))
+        let response: Response = try await callEdgeFunction(
+            name: "propose-meetup",
+            body: Payload(
+                orderId: orderID,
+                location: location,
+                dateISO: iso.string(from: date),
+                proposedBy: proposedBy
+            )
+        )
+        guard response.success else {
+            throw NSError(domain: "OrderService", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "Could not send meetup proposal."])
+        }
+        if resetProgressToPending {
+            guard let me = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+            try await supabase
+                .from("orders")
+                .update([
+                    "status": "pending"
+                ])
+                .eq("id", value: orderID)
+                .eq("seller_id", value: me)
+                .execute()
+        }
+        await notifyOtherParty(
+            orderID: orderID,
+            title: proposedBy == "seller" ? "Meetup Proposed" : "Meetup Counter-Proposed",
+            body: "Review the proposed meetup details."
+        )
+    }
+
+    /// Seller accepts a pending order before meetup / delivery details are finalized.
+    static func acceptOrder(orderID: String) async throws {
+        guard let me = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+        try await supabase
+            .from("orders")
+            .update([
+                "status": "seller_accepted",
+                "seller_accepted_at": ISO8601DateFormatter().string(from: Date())
+            ])
+            .eq("id", value: orderID)
+            .eq("seller_id", value: me)
+            .eq("status", value: "pending")
+            .execute()
+        await notifyOtherParty(orderID: orderID, title: "Order Accepted", body: "The seller accepted your order.")
     }
 
     /// Accepts the current meetup proposal via edge function.
     static func acceptMeetup(orderID: String) async throws {
         struct Payload: Encodable { let orderId: String }
         struct Response: Decodable { let success: Bool }
-        let _: Response = try await supabase.functions
-            .invoke("accept-meetup", options: FunctionInvokeOptions(body: Payload(orderId: orderID)))
+        let _: Response = try await callEdgeFunction(name: "accept-meetup", body: Payload(orderId: orderID))
+        await notifyOtherParty(orderID: orderID, title: "Meetup Accepted", body: "The meetup has been confirmed.")
     }
 
     /// Cancels the order via edge function.
     static func cancelOrder(orderID: String) async throws {
         struct Payload: Encodable { let orderId: String }
         struct Response: Decodable { let success: Bool }
-        let _: Response = try await supabase.functions
-            .invoke("cancel-order", options: FunctionInvokeOptions(body: Payload(orderId: orderID)))
+        let _: Response = try await callEdgeFunction(name: "cancel-order", body: Payload(orderId: orderID))
+        await notifyOtherParty(orderID: orderID, title: "Order Cancelled", body: "The order has been cancelled.")
     }
 
     /// Marks order as disputed via edge function.
     static func disputeOrder(orderID: String) async throws {
         struct Payload: Encodable { let orderId: String }
         struct Response: Decodable { let success: Bool }
-        let _: Response = try await supabase.functions
-            .invoke("dispute-order", options: FunctionInvokeOptions(body: Payload(orderId: orderID)))
+        let _: Response = try await callEdgeFunction(name: "dispute-order", body: Payload(orderId: orderID))
+        await notifyOtherParty(orderID: orderID, title: "Order Disputed", body: "A problem was reported for this order.")
     }
+
+    /// Marks a cash order as complete directly in the DB (no Stripe involved).
+    static func markCashOrderComplete(orderID: String) async throws {
+        guard let me = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+        try await supabase
+            .from("orders")
+            .update([
+                "status":       "complete",
+                "escrow_status": "released",
+                "complete_at":  ISO8601DateFormatter().string(from: Date())
+            ])
+            .eq("id", value: orderID)
+            .eq("buyer_id", value: me)
+            .execute()
+        await notifyOtherParty(orderID: orderID, title: "Order Closed", body: "The buyer confirmed receipt.")
+    }
+
+    /// Creates a cash order (no Stripe payment). Returns the new order ID.
+    static func createCashOrder(listingID: UUID, fulfilment: FulfilmentMethod, deliveryAddress: String, meetupLocation: String = "") async throws -> String {
+        struct Payload: Encodable {
+            let listingId      : String
+            let fulfilment     : String
+            let deliveryAddress: String
+            let meetupLocation : String
+        }
+        struct Response: Decodable { let orderId: String }
+        let response: Response = try await callEdgeFunction(
+            name: "create-cash-order",
+            body: Payload(
+                listingId      : listingID.uuidString.lowercased(),
+                fulfilment     : fulfilment.dbValue,
+                deliveryAddress: fulfilment == .delivery ? deliveryAddress : "",
+                meetupLocation : fulfilment == .meetup ? meetupLocation : ""
+            )
+        )
+        await notifyOtherParty(orderID: response.orderId, title: "New Order", body: "You have a new order to review.")
+        return response.orderId
+    }
+
 }
 
 
 // MARK: - AnnouncementService
 
 enum AnnouncementService {
+
+    private static func uploadImages(knotID: UUID, images: [UIImage]) async throws -> [String] {
+        guard !images.isEmpty else { return [] }
+
+        return try await withThrowingTaskGroup(of: (Int, String).self) { group in
+            for (index, image) in Array(images.prefix(5)).enumerated() {
+                group.addTask {
+                    guard let data = image.jpegData(compressionQuality: 0.75) else {
+                        throw NSError(
+                            domain: "AnnouncementService",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "Could not encode announcement image."]
+                        )
+                    }
+
+                    let path = "\(knotID.uuidString.lowercased())/announcements/\(UUID().uuidString.lowercased())-\(index).jpg"
+                    try await supabase.storage
+                        .from(Bucket.knotImages)
+                        .upload(path, data: data, options: FileOptions(contentType: "image/jpeg", upsert: false))
+
+                    let url = try await supabase.storage
+                        .from(Bucket.knotImages)
+                        .getPublicURL(path: path)
+
+                    return (index, url.absoluteString)
+                }
+            }
+
+            var indexedURLs: [(Int, String)] = []
+            for try await result in group {
+                indexedURLs.append(result)
+            }
+            return indexedURLs
+                .sorted { $0.0 < $1.0 }
+                .map(\.1)
+        }
+    }
 
     struct FetchedAnnouncement {
         let announcement : DBAnnouncement
@@ -922,6 +1679,24 @@ enum AnnouncementService {
 
         guard !announcements.isEmpty else { return [] }
 
+        // Fetch membership join dates so we can hide payment request alerts that
+        // existed before the current user joined the knot.
+        struct MemberDateRow: Decodable, Sendable {
+            let knotId   : UUID
+            let joinedAt : Date
+            enum CodingKeys: String, CodingKey {
+                case knotId   = "knot_id"
+                case joinedAt = "joined_at"
+            }
+        }
+        let memberships: [MemberDateRow] = (try? await supabase
+            .from("knot_members")
+            .select("knot_id, joined_at")
+            .execute()
+            .value) ?? []
+        let joinedAtMap = Dictionary(memberships.map { ($0.knotId, $0.joinedAt) },
+                                     uniquingKeysWith: { a, _ in a })
+
         let reads: [DBAnnouncementRead]
         do {
             reads = try await supabase
@@ -937,8 +1712,18 @@ enum AnnouncementService {
 
         let readMap = Dictionary(reads.map { ($0.announcementId, $0) }, uniquingKeysWith: { first, _ in first })
 
-        return announcements.map { ann in
+        return announcements.compactMap { ann in
             let r = readMap[ann.id]
+            if r?.isDismissed == true { return nil }
+
+            // Hide payment request alerts that were sent before this user joined the knot.
+            if ann.paymentRequestId != nil,
+               let knotID = ann.knotId,
+               let joinedAt = joinedAtMap[knotID],
+               ann.createdAt < joinedAt {
+                return nil
+            }
+
             return FetchedAnnouncement(
                 announcement: ann,
                 isRead      : r?.isRead   ?? false,
@@ -959,16 +1744,78 @@ enum AnnouncementService {
         }
     }
 
+    /// Dismiss a single announcement for the current user (per-user, server-side).
+    static func dismiss(announcementID: UUID) async throws {
+        guard let userID = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+        struct DismissUpsert: Encodable {
+            let announcement_id : UUID
+            let user_id         : UUID
+            let is_read         : Bool
+            let is_dismissed    : Bool
+        }
+        try await supabase
+            .from("announcement_reads")
+            .upsert(
+                DismissUpsert(
+                    announcement_id: announcementID,
+                    user_id        : userID,
+                    is_read        : true,
+                    is_dismissed   : true
+                ),
+                onConflict: "announcement_id,user_id"
+            )
+            .execute()
+    }
+
+    /// Dismiss all currently-visible announcements for the current user.
+    static func dismissAll(announcementIDs: [UUID]) async throws {
+        guard let userID = supabase.auth.currentUser?.id else { throw AuthError.sessionMissing }
+        guard !announcementIDs.isEmpty else { return }
+        struct DismissUpsert: Encodable {
+            let announcement_id : UUID
+            let user_id         : UUID
+            let is_read         : Bool
+            let is_dismissed    : Bool
+        }
+        let rows = announcementIDs.map {
+            DismissUpsert(announcement_id: $0, user_id: userID, is_read: true, is_dismissed: true)
+        }
+        try await supabase
+            .from("announcement_reads")
+            .upsert(rows, onConflict: "announcement_id,user_id")
+            .execute()
+    }
+
     /// Sends an announcement to a knot via a SECURITY DEFINER RPC.
     /// The RPC validates that the caller is a knot creator or co_admin.
-    static func send(knotID: UUID, title: String, body: String, isPinned: Bool) async throws {
+    static func send(
+        knotID: UUID,
+        title: String,
+        body: String,
+        isPinned: Bool,
+        images: [UIImage] = []
+    ) async throws {
         struct Params: Encodable {
             let p_knot_id   : UUID
             let p_title     : String
             let p_body      : String
             let p_is_pinned : Bool
         }
-        do {
+
+        let plainBody = body
+        var bodyToSend = plainBody
+
+        if !images.isEmpty {
+            do {
+                let imageURLs = try await uploadImages(knotID: knotID, images: images)
+                bodyToSend = AnnouncementBodyCodec.encode(body: body, imageURLs: imageURLs)
+            } catch {
+                print("[AnnouncementService] image upload failed; sending text-only alert instead: \(error)")
+                bodyToSend = plainBody
+            }
+        }
+
+        func sendRPC(with body: String) async throws {
             try await supabase
                 .rpc("send_announcement", params: Params(
                     p_knot_id  : knotID,
@@ -977,9 +1824,43 @@ enum AnnouncementService {
                     p_is_pinned: isPinned
                 ))
                 .execute()
+        }
+
+        do {
+            try await sendRPC(with: bodyToSend)
         } catch {
+            if bodyToSend != plainBody {
+                print("[AnnouncementService] rich alert send failed; retrying text-only alert: \(error)")
+                try await sendRPC(with: plainBody)
+                return
+            }
             print("[AnnouncementService] send error: \(error)")
             throw error
+        }
+
+        // Fire-and-forget push notifications to all knot members
+        Task {
+            do {
+                guard let me = supabase.auth.currentUser?.id else { return }
+                struct MemberRow: Decodable { let user_id: UUID }
+                let members: [MemberRow] = try await supabase
+                    .from("knot_members")
+                    .select("user_id")
+                    .eq("knot_id", value: knotID)
+                    .neq("user_id", value: me)
+                    .execute()
+                    .value
+                for m in members {
+                    await NotificationManager.notify(
+                        userID: m.user_id,
+                        title : title,
+                        body  : body.count > 80 ? String(body.prefix(80)) + "…" : body,
+                        target: "alerts"
+                    )
+                }
+            } catch {
+                print("[AnnouncementService] notification error: \(error)")
+            }
         }
     }
 }

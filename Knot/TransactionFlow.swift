@@ -6,7 +6,7 @@ private struct SectionCard<Content: View>: View {
     @ViewBuilder let content: Content
     var body: some View {
         VStack(spacing: 0) { content }
-            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .background(Color.knotSurface)
             .cornerRadius(14)
     }
 }
@@ -14,11 +14,10 @@ private struct SectionCard<Content: View>: View {
 private struct PartyRow: View {
     let name: String
     let subtitle: String
-    let rating: Double
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(Color(UIColor.systemGray4))
+                .fill(Color.knotSurface)
                 .frame(width: 44, height: 44)
                 .overlay {
                     Text(String(name.prefix(1)))
@@ -26,14 +25,9 @@ private struct PartyRow: View {
                 }
             VStack(alignment: .leading, spacing: 2) {
                 Text(name).fontWeight(.semibold)
-                HStack(spacing: 3) {
-                    Image(systemName: "star.fill")
-                        .font(.caption2)
-                        .foregroundColor(Color(.systemOrange))
-                    Text(String(format: "%.1f · %@", rating, subtitle))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             Spacer()
         }
@@ -46,11 +40,11 @@ private struct ListingMiniCard: View {
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color(UIColor.systemGray5))
+                .fill(Color.knotSurface)
                 .frame(width: 52, height: 52)
                 .overlay {
                     Image(systemName: listing.type.icon)
-                        .foregroundColor(Color(UIColor.systemGray2))
+                        .foregroundColor(Color.knotMuted)
                 }
             VStack(alignment: .leading, spacing: 3) {
                 Text(listing.name).font(.subheadline).fontWeight(.semibold)
@@ -60,7 +54,7 @@ private struct ListingMiniCard: View {
             Spacer()
         }
         .padding()
-        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .background(Color.knotSurface)
         .cornerRadius(14)
     }
 }
@@ -100,11 +94,14 @@ struct SellerNewOrderView: View {
     var onAccepted: () -> Void = {}
     var onDeclined: () -> Void = {}
 
+    @Environment(UserProfile.self) private var profile
     @State private var secondsRemaining    = 86_400   // 24h
     @State private var timer               : Timer?
     @State private var navigateToPropose   = false
     @State private var navigateToConfirmed = false
+    @State private var navigateToTimeline  = false
     @State private var showDeclineConfirm  = false
+    @State private var isAccepting         = false
 
     var body: some View {
         NavigationStack {
@@ -117,7 +114,7 @@ struct SellerNewOrderView: View {
 
                     // ── Buyer Info ────────────────────────────────────
                     SectionCard {
-                        PartyRow(name: order.buyerName, subtitle: "Buyer", rating: 4.7)
+                        PartyRow(name: order.buyerName, subtitle: "Buyer")
                             .padding()
                     }
 
@@ -171,33 +168,58 @@ struct SellerNewOrderView: View {
                         isActive: $navigateToConfirmed
                     ) { EmptyView() }
 
+                    NavigationLink(
+                        destination: OrderTimelineView(order: order, isSeller: true),
+                        isActive: $navigateToTimeline
+                    ) { EmptyView() }
+
+                    if order.status == .pending {
+                        Button(action: acceptOrder) {
+                            Group {
+                                if isAccepting {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                } else {
+                                    Label("Accept Order", systemImage: "checkmark.circle.fill")
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(isAccepting ? Color(.systemGreen).opacity(0.6) : Color(.systemGreen))
+                            .cornerRadius(14)
+                        }
+                        .disabled(isAccepting)
+                    }
+
                     if order.meetupProposal?.proposedBy == "buyer" {
                         Button(action: acceptBuyerMeetup) {
-                            Label("Accept Meetup", systemImage: "checkmark.circle.fill")
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color(.systemGreen))
-                                .cornerRadius(14)
-                        }
-                        Button(action: { navigateToPropose = true }) {
-                            Text("Counter-Propose")
+                            Label("Accept Meetup", systemImage: "mappin.and.ellipse")
                                 .fontWeight(.semibold)
                                 .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color(.secondarySystemGroupedBackground))
+                                .background(Color.knotSurface)
                                 .cornerRadius(14)
                         }
-                    } else {
+                        Button(action: { navigateToPropose = true }) {
+                            Text("Propose New Meetup")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.knotSurface)
+                                .cornerRadius(14)
+                        }
+                    } else if order.fulfilment == .meetup {
                         Button(action: { navigateToPropose = true }) {
                             Label("Propose Meetup", systemImage: "mappin.circle.fill")
                                 .fontWeight(.semibold)
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color(.systemGreen))
+                                .background(Color.knotSurface)
                                 .cornerRadius(14)
                         }
                     }
@@ -211,7 +233,7 @@ struct SellerNewOrderView: View {
                 }
                 .padding()
             }
-            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+            .background(Color.knotBackground.ignoresSafeArea())
             .navigationTitle("New Order")
             .navigationBarTitleDisplayMode(.inline)
             .confirmationDialog("Decline Order", isPresented: $showDeclineConfirm, titleVisibility: .visible) {
@@ -219,13 +241,33 @@ struct SellerNewOrderView: View {
                     Task {
                         try? await OrderService.cancelOrder(orderID: order.id)
                         order.status = .cancelled
+                        order.stepDates["cancelled"] = Date()
                         onDeclined()
                     }
                 }
                 Button("Cancel", role: .cancel) {}
-            } message: { Text("The buyer will be refunded. This cannot be undone.") }
+            } message: { Text(order.isCash
+                ? "This order will be cancelled. This cannot be undone."
+                : "The buyer will be refunded. This cannot be undone.") }
             .onAppear { startTimer() }
             .onDisappear { timer?.invalidate() }
+        }
+    }
+
+    private func acceptOrder() {
+        guard !isAccepting else { return }
+        isAccepting = true
+        Task {
+            do {
+                try await OrderService.acceptOrder(orderID: order.id)
+                order.status = .sellerAccepted
+                order.stepDates["seller_accepted"] = Date()
+                onAccepted()
+                navigateToTimeline = true
+            } catch {
+                print("[acceptOrder] error: \(error)")
+            }
+            await MainActor.run { isAccepting = false }
         }
     }
 
@@ -237,8 +279,10 @@ struct SellerNewOrderView: View {
                 order.status = .meetupAgreed
                 order.stepDates["seller_accepted"] = now
                 order.stepDates["meetup_agreed"]   = now
-                navigateToConfirmed = true
                 onAccepted()
+                await profile.loadOrders()
+                // Accepting the meetup goes straight back to the Hub.
+                profile.closeOrdersFlowSignal.toggle()
             } catch {
                 print("[acceptBuyerMeetup] error: \(error)")
             }
@@ -254,8 +298,11 @@ struct SellerNewOrderView: View {
                 timer?.invalidate()
                 Task {
                     try? await OrderService.cancelOrder(orderID: order.id)
-                    order.status = .cancelled
-                    onDeclined()
+                    await MainActor.run {
+                        order.status = .cancelled
+                        order.stepDates["cancelled"] = Date()
+                        onDeclined()
+                    }
                 }
             }
         }
@@ -268,12 +315,15 @@ struct SellerProposeMeetupView: View {
     @Binding var order: KnotOrder
     var onSent: () -> Void = {}
     @Environment(\.dismiss) var dismiss
+    @Environment(UserProfile.self) private var profile
 
     @State private var location = ""
     @State private var meetupDate = Date().addingTimeInterval(86_400)
-    @State private var navigateToConfirmed = false
+    @State private var isSending = false
+    @State private var errorMessage: String? = nil
 
-    private var canSend: Bool { !location.trimmingCharacters(in: .whitespaces).isEmpty }
+    private var canSend: Bool { !location.trimmingCharacters(in: .whitespaces).isEmpty && !isSending }
+    private var isReproposal: Bool { order.meetupProposal?.proposedBy == "buyer" }
 
     var body: some View {
         ScrollView {
@@ -301,46 +351,82 @@ struct SellerProposeMeetupView: View {
                     }
                 }
 
-                NavigationLink(
-                    destination: MeetupConfirmedView(order: order, isSeller: true),
-                    isActive: $navigateToConfirmed
-                ) { EmptyView() }
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(Color(.systemRed))
+                        .multilineTextAlignment(.center)
+                }
 
                 Button(action: sendProposal) {
-                    Text("Send Proposal")
-                        .fontWeight(.semibold)
-                        .foregroundColor(canSend ? .white : Color(UIColor.systemGray3))
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(canSend ? Color.black : Color(UIColor.systemGray5))
-                        .cornerRadius(14)
+                    Group {
+                        if isSending {
+                            ProgressView().tint(Color.knotOnAccent)
+                        } else {
+                            Text(isReproposal ? "Send New Proposal" : "Send Proposal")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .foregroundColor(canSend ? Color.knotOnAccent : Color.knotMuted)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(canSend ? Color.knotAccent : Color.knotSurface)
+                    .cornerRadius(14)
                 }
                 .disabled(!canSend)
             }
             .padding()
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("Propose Meetup")
+        .background(Color.knotBackground.ignoresSafeArea())
+        .navigationTitle(isReproposal ? "Propose New Meetup" : "Propose Meetup")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if location.isEmpty, let proposal = order.meetupProposal {
+                location = proposal.location
+                meetupDate = max(proposal.date, Date().addingTimeInterval(60))
+            }
+        }
     }
 
     private func sendProposal() {
+        guard canSend else { return }
+        isSending = true
+        errorMessage = nil
         Task {
             do {
                 try await OrderService.proposeMeetup(
                     orderID   : order.id,
                     location  : location,
                     date      : meetupDate,
-                    proposedBy: "seller"
+                    proposedBy: "seller",
+                    resetProgressToPending: isReproposal
                 )
                 order.meetupProposal = MeetupProposal(location: location, date: meetupDate, proposedBy: "seller")
-                order.status = .sellerAccepted
-                order.stepDates["seller_accepted"] = Date()
-                navigateToConfirmed = true
+                if isReproposal {
+                    order.status = .pending
+                    order.stepDates.removeValue(forKey: "seller_accepted")
+                    order.stepDates.removeValue(forKey: "meetup_agreed")
+                } else {
+                    order.status = .sellerAccepted
+                    order.stepDates["seller_accepted"] = Date()
+                }
+                await profile.loadOrders()
+                if let updated = profile.orders.first(where: { $0.id == order.id }) {
+                    order = updated
+                }
+                if isReproposal {
+                    order.status = .pending
+                    order.stepDates.removeValue(forKey: "seller_accepted")
+                    order.stepDates.removeValue(forKey: "meetup_agreed")
+                }
                 onSent()
+                // Proposing the meetup goes straight back to the Hub.
+                profile.closeOrdersFlowSignal.toggle()
             } catch {
                 print("[sendProposal] error: \(error)")
+                errorMessage = "Could not send meetup proposal. Please try again."
             }
+            await MainActor.run { isSending = false }
         }
     }
 }
@@ -351,8 +437,11 @@ struct BuyerMeetupProposalView: View {
     @Binding var order: KnotOrder
     var onAccepted: () -> Void = {}
 
-    @State private var navigateToConfirmed = false
+    @Environment(\.dismiss) private var dismiss
+    @Environment(UserProfile.self) private var profile
     @State private var navigateToSuggest   = false
+    @State private var showDeclineConfirm  = false
+    @State private var isDeclining         = false
 
     private var proposal: MeetupProposal? { order.meetupProposal }
 
@@ -363,7 +452,7 @@ struct BuyerMeetupProposalView: View {
 
                     // ── Seller Info ───────────────────────────────────
                     SectionCard {
-                        PartyRow(name: order.sellerName, subtitle: "Seller", rating: 4.8)
+                        PartyRow(name: order.sellerName, subtitle: "Seller")
                             .padding()
                     }
 
@@ -386,11 +475,6 @@ struct BuyerMeetupProposalView: View {
 
                     // ── Actions ───────────────────────────────────────
                     NavigationLink(
-                        destination: MeetupConfirmedView(order: order, isSeller: false),
-                        isActive: $navigateToConfirmed
-                    ) { EmptyView() }
-
-                    NavigationLink(
                         destination: BuyerSuggestAlternativeView(order: $order),
                         isActive: $navigateToSuggest
                     ) { EmptyView() }
@@ -411,15 +495,40 @@ struct BuyerMeetupProposalView: View {
                             .foregroundColor(.primary)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color(UIColor.secondarySystemGroupedBackground))
+                            .background(Color.knotSurface)
                             .cornerRadius(14)
                     }
+
+                    Button(action: { showDeclineConfirm = true }) {
+                        Group {
+                            if isDeclining {
+                                ProgressView().tint(.red)
+                            } else {
+                                Label("Decline & Cancel Order", systemImage: "xmark.circle")
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(Color(.systemRed))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.systemRed).opacity(0.08))
+                        .cornerRadius(14)
+                    }
+                    .disabled(isDeclining)
                 }
                 .padding()
             }
-            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+            .background(Color.knotBackground.ignoresSafeArea())
             .navigationTitle("Meetup Proposed")
             .navigationBarTitleDisplayMode(.inline)
+            .confirmationDialog("Decline Meetup", isPresented: $showDeclineConfirm, titleVisibility: .visible) {
+                Button("Decline & Cancel Order", role: .destructive) {
+                    declineOrder()
+                }
+                Button("Keep Reviewing", role: .cancel) {}
+            } message: {
+                Text("This cancels the order for both parties. This cannot be undone.")
+            }
         }
     }
 
@@ -429,11 +538,29 @@ struct BuyerMeetupProposalView: View {
                 try await OrderService.acceptMeetup(orderID: order.id)
                 order.status = .meetupAgreed
                 order.stepDates["meetup_agreed"] = Date()
-                navigateToConfirmed = true
                 onAccepted()
+                await profile.loadOrders()
+                // Accepting the meetup goes straight back to the Hub.
+                profile.closeOrdersFlowSignal.toggle()
             } catch {
                 print("[acceptMeetup] error: \(error)")
             }
+        }
+    }
+
+    private func declineOrder() {
+        guard !isDeclining else { return }
+        isDeclining = true
+        Task {
+            do {
+                try await OrderService.cancelOrder(orderID: order.id)
+                order.status = .cancelled
+                order.stepDates["cancelled"] = Date()
+                dismiss()
+            } catch {
+                print("[declineOrder] error: \(error)")
+            }
+            await MainActor.run { isDeclining = false }
         }
     }
 
@@ -458,12 +585,15 @@ struct BuyerMeetupProposalView: View {
 struct BuyerSuggestAlternativeView: View {
     @Binding var order: KnotOrder
     @Environment(\.dismiss) var dismiss
+    @Environment(UserProfile.self) private var profile
 
     @State private var location   = ""
     @State private var meetupDate = Date().addingTimeInterval(86_400)
     @State private var sent       = false
+    @State private var isSending  = false
+    @State private var errorMessage: String? = nil
 
-    private var canSend: Bool { !location.trimmingCharacters(in: .whitespaces).isEmpty }
+    private var canSend: Bool { !location.trimmingCharacters(in: .whitespaces).isEmpty && !isSending }
 
     var body: some View {
         ScrollView {
@@ -494,22 +624,41 @@ struct BuyerSuggestAlternativeView: View {
                     }
                 }
 
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(Color(.systemRed))
+                        .multilineTextAlignment(.center)
+                }
+
                 Button(action: sendSuggestion) {
-                    Text("Send Suggestion")
-                        .fontWeight(.semibold)
-                        .foregroundColor(canSend ? .white : Color(UIColor.systemGray3))
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(canSend ? Color.black : Color(UIColor.systemGray5))
-                        .cornerRadius(14)
+                    Group {
+                        if isSending {
+                            ProgressView().tint(Color.knotOnAccent)
+                        } else {
+                            Text("Send Suggestion")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .foregroundColor(canSend ? Color.knotOnAccent : Color.knotMuted)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(canSend ? Color.knotAccent : Color.knotSurface)
+                    .cornerRadius(14)
                 }
                 .disabled(!canSend)
             }
             .padding()
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Suggest Alternative")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if location.isEmpty, let proposal = order.meetupProposal {
+                location = proposal.location
+                meetupDate = max(proposal.date, Date().addingTimeInterval(60))
+            }
+        }
         .alert("Suggestion Sent", isPresented: $sent) {
             Button("OK") { dismiss() }
         } message: {
@@ -518,6 +667,9 @@ struct BuyerSuggestAlternativeView: View {
     }
 
     private func sendSuggestion() {
+        guard canSend else { return }
+        isSending = true
+        errorMessage = nil
         Task {
             do {
                 try await OrderService.proposeMeetup(
@@ -527,11 +679,18 @@ struct BuyerSuggestAlternativeView: View {
                     proposedBy: "buyer"
                 )
                 order.meetupProposal = MeetupProposal(location: location, date: meetupDate, proposedBy: "buyer")
-                order.status = .pending
+                order.status = .sellerAccepted
+                order.stepDates["seller_accepted"] = order.stepDates["seller_accepted"] ?? Date()
+                await profile.loadOrders()
+                if let updated = profile.orders.first(where: { $0.id == order.id }) {
+                    order = updated
+                }
                 sent = true
             } catch {
                 print("[sendSuggestion] error: \(error)")
+                errorMessage = "Could not send meetup suggestion. Please try again."
             }
+            await MainActor.run { isSending = false }
         }
     }
 }
@@ -547,6 +706,7 @@ struct MeetupConfirmedView: View {
     @State private var checkOpacity: Double  = 0
 
     private var otherParty: String { isSeller ? order.buyerName : order.sellerName }
+    private var otherPartyID: UUID { isSeller ? order.buyerId : order.sellerId }
     private var proposal: MeetupProposal? { order.meetupProposal }
 
     var body: some View {
@@ -570,8 +730,8 @@ struct MeetupConfirmedView: View {
                     Text("Meetup Confirmed")
                         .font(.title2).fontWeight(.bold)
                     Text(isSeller
-                         ? "Meet up and hand over the item. Payment is released once the buyer confirms receipt."
-                         : "Meet up and collect the item. Then press \"I Received the Item\" to release payment.")
+                         ? "Meet up and hand over the item. The order closes once the buyer confirms receipt."
+                         : "Meet up and collect the item. Then press \"I Received the Item\" to close the order.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -592,10 +752,10 @@ struct MeetupConfirmedView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "person.circle.fill")
                                     .font(.title3)
-                                    .foregroundColor(Color(UIColor.systemGray3))
+                                    .foregroundColor(Color.knotMuted)
                                     .frame(width: 28)
                                 Circle()
-                                    .fill(Color(UIColor.systemGray4))
+                                    .fill(Color.knotSurface)
                                     .frame(width: 32, height: 32)
                                     .overlay {
                                         Text(String(otherParty.prefix(1)))
@@ -615,7 +775,7 @@ struct MeetupConfirmedView: View {
                         .foregroundColor(isSeller ? Color(.systemOrange) : Color(.systemGreen))
                     Text(isSeller
                          ? "Remind \(otherParty) to tap \"I Received the Item\" in the order page after the exchange."
-                         : "After you receive the item, open the order and tap \"I Received the Item\" to release payment.")
+                         : "After you receive the item, open the order and tap \"I Received the Item\" to close the order.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -628,17 +788,17 @@ struct MeetupConfirmedView: View {
                 NavigationLink(destination: OrderTimelineView(order: order, isSeller: isSeller)) {
                     Text("View Order")
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.knotOnAccent)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.black)
+                        .background(Color.knotAccent)
                         .cornerRadius(14)
                 }
 
                 Button(action: {
                     dismiss()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                        profile.openConversation(with: otherParty)
+                        profile.openConversation(withUserID: otherPartyID, name: otherParty)
                     }
                 }) {
                     Label("Message \(otherParty)", systemImage: "message.fill")
@@ -646,13 +806,13 @@ struct MeetupConfirmedView: View {
                         .foregroundColor(.primary)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .background(Color.knotSurface)
                         .cornerRadius(14)
                 }
             }
             .padding()
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Meetup Confirmed")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -694,15 +854,15 @@ struct BuyerConfirmReceiptView: View {
                     ListingMiniCard(listing: order.listing,
                                     subtitle: "Seller: \(order.sellerName)")
 
-                    // ── Escrow Reminder ───────────────────────────────
+                    // ── Payment reminder ──────────────────────────────
                     HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "shield.lefthalf.filled")
+                        Image(systemName: "banknote")
                             .font(.title2)
                             .foregroundColor(Color(.systemGreen))
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(formatSGD(order.total) + " is held securely.")
+                            Text("Cash payment")
                                 .fontWeight(.semibold)
-                            Text("Release it once you're happy with your item.")
+                            Text("Confirm you've collected the item and paid the seller in cash.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -712,20 +872,7 @@ struct BuyerConfirmReceiptView: View {
                     .background(Color(.systemGreen).opacity(0.08))
                     .cornerRadius(14)
 
-                    // ── Auto-release countdown ────────────────────────
-                    CountdownBadge(
-                        secondsRemaining: secondsRemaining,
-                        icon: "timer",
-                        tint: Color(.systemOrange),
-                        prefix: "Payment auto-releases in "
-                    )
-
                     // ── Actions ───────────────────────────────────────
-                    NavigationLink(
-                        destination: TransactionCompleteView(order: order, isSeller: false),
-                        isActive: $navigateToComplete
-                    ) { EmptyView() }
-
                     NavigationLink(
                         destination: ProblemReportView(order: $order),
                         isActive: $navigateToProblem
@@ -737,7 +884,8 @@ struct BuyerConfirmReceiptView: View {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             } else {
-                                Label("Yes, Release Payment", systemImage: "checkmark.circle.fill")
+                                Label("I Received the Item",
+                                      systemImage: "checkmark.circle.fill")
                                     .fontWeight(.semibold)
                             }
                         }
@@ -758,12 +906,15 @@ struct BuyerConfirmReceiptView: View {
                 }
                 .padding()
             }
-            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+            .background(Color.knotBackground.ignoresSafeArea())
             .navigationTitle("Did you receive your item?")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { startTimer() }
             .onDisappear { timer?.invalidate() }
-            .alert("Could not release payment", isPresented: $confirmError) {
+            .navigationDestination(isPresented: $navigateToComplete) {
+                TransactionCompleteView(order: order, isSeller: false)
+            }
+            .alert("Could not close order", isPresented: $confirmError) {
                 Button("Try Again") { Task { await confirmReceipt() } }
                 Button("Cancel", role: .cancel) { }
             } message: {
@@ -775,9 +926,8 @@ struct BuyerConfirmReceiptView: View {
     private func confirmReceipt() async {
         guard !isConfirming else { return }
         isConfirming = true
-        defer { isConfirming = false }
         do {
-            try await OrderService.releaseEscrow(orderID: order.id)
+            try await OrderService.markCashOrderComplete(orderID: order.id)
             timer?.invalidate()
             order.status = .complete
             order.escrow = .released
@@ -787,6 +937,7 @@ struct BuyerConfirmReceiptView: View {
             navigateToComplete = true
         } catch {
             confirmError = true
+            isConfirming = false
         }
     }
 
@@ -869,7 +1020,7 @@ struct ProblemReportView: View {
                         .overlay(alignment: .topLeading) {
                             if description.isEmpty {
                                 Text("Describe the issue...")
-                                    .foregroundColor(Color(UIColor.systemGray3))
+                                    .foregroundColor(Color.knotMuted)
                                     .padding(14)
                                     .allowsHitTesting(false)
                             }
@@ -880,10 +1031,10 @@ struct ProblemReportView: View {
                 Button(action: submitReport) {
                     Text("Submit Report")
                         .fontWeight(.semibold)
-                        .foregroundColor(canSubmit ? .white : Color(UIColor.systemGray3))
+                        .foregroundColor(canSubmit ? .white : Color.knotMuted)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(canSubmit ? Color(.systemRed) : Color(UIColor.systemGray5))
+                        .background(canSubmit ? Color(.systemRed) : Color.knotSurface)
                         .cornerRadius(14)
                 }
                 .disabled(!canSubmit)
@@ -894,7 +1045,7 @@ struct ProblemReportView: View {
             }
             .padding()
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Report a Problem")
         .navigationBarTitleDisplayMode(.inline)
         .alert("Report Submitted", isPresented: $submitted) {
@@ -918,8 +1069,6 @@ struct ProblemReportView: View {
 struct TransactionCompleteView: View {
     let order: KnotOrder
     let isSeller: Bool
-    @State private var showInvoice     = false
-    @State private var showReview      = false
     @State private var checkScale    : CGFloat = 0.3
     @State private var checkOpacity  : Double  = 0
 
@@ -942,62 +1091,18 @@ struct TransactionCompleteView: View {
                 VStack(spacing: 8) {
                     Text("Transaction Complete")
                         .font(.title2).fontWeight(.bold)
-                    if isSeller {
-                        Text(formatSGD(order.payout) + " has been released to your account.")
-                            .font(.subheadline).foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    } else {
-                        Text("You paid " + formatSGD(order.total) + ". Thanks for using Knot!")
-                            .font(.subheadline).foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
+                    Text("Thanks for using Knot!")
+                        .font(.subheadline).foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
                 }
 
-                // ── Amount Card ───────────────────────────────────────
-                SectionCard {
-                    HStack {
-                        Text(isSeller ? "Amount received" : "Amount paid")
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text(formatSGD(isSeller ? order.payout : order.total))
-                            .font(.headline)
-                    }
-                    .padding()
-                }
-
-                // ── Buttons ───────────────────────────────────────────
-                Button(action: { showReview = true }) {
-                    Label("Leave a Review", systemImage: "star.fill")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.black)
-                        .cornerRadius(14)
-                }
-
-                Button(action: { showInvoice = true }) {
-                    Text("View Invoice")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(UIColor.secondarySystemGroupedBackground))
-                        .cornerRadius(14)
-                }
             }
             .padding()
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Transaction Complete")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .sheet(isPresented: $showInvoice) {
-            InvoiceView(order: order)
-        }
-        .sheet(isPresented: $showReview) {
-            LeaveReviewView(order: order, isSeller: isSeller)
-        }
     }
 }
 
@@ -1026,7 +1131,7 @@ struct TransactionCancelledView: View {
             VStack(spacing: 10) {
                 Text("Order Cancelled")
                     .font(.title2).fontWeight(.bold)
-                Text("The seller did not respond in time.\nYour payment will be refunded within 3–5 business days.")
+                Text("The seller did not respond in time.\nThis order has been cancelled.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -1035,17 +1140,17 @@ struct TransactionCancelledView: View {
             Button(action: onBrowse) {
                 Text("Browse More Listings")
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.knotOnAccent)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.black)
+                    .background(Color.knotAccent)
                     .cornerRadius(14)
             }
             .padding(.horizontal)
 
             Spacer()
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Order Cancelled")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -1059,15 +1164,21 @@ struct OrderTimelineView: View {
     let isSeller: Bool
     @Environment(UserProfile.self) var profile
     @Environment(\.dismiss) var dismiss
-    @State private var showReview          = false
-    @State private var showInvoice         = false
-    @State private var navigateToReceipt   = false
-    @State private var navigateToComplete  = false
-    @State private var navigateToAccept    = false
+    @State private var navigateToReceipt      = false
+    @State private var navigateToComplete     = false
+    @State private var navigateToAccept       = false
+    @State private var navigateToMeetupReview = false
+    @State private var showBuyerCancelConfirm = false
+    @State private var isCancelling           = false
     @State private var mutableOrder: KnotOrder? = nil
     @State private var refreshTimer: Timer?     = nil
 
     private var liveOrder: KnotOrder { mutableOrder ?? order }
+    private var isAwaitingBuyerOnSellerProposal: Bool {
+        liveOrder.fulfilment == .meetup &&
+        liveOrder.meetupProposal?.proposedBy == "seller" &&
+        (liveOrder.status == .pending || liveOrder.status == .sellerAccepted)
+    }
 
     private struct TimelineStep {
         let status  : String
@@ -1076,7 +1187,7 @@ struct OrderTimelineView: View {
     }
 
     private let steps: [TimelineStep] = [
-        TimelineStep(status: "pending",               label: "Payment received",     icon: "creditcard.fill"),
+        TimelineStep(status: "pending",               label: "Order placed",         icon: "bag.fill"),
         TimelineStep(status: "seller_accepted",        label: "Seller accepted",      icon: "person.badge.checkmark.fill"),
         TimelineStep(status: "meetup_agreed",          label: "Meetup agreed",        icon: "mappin.circle.fill"),
         TimelineStep(status: "awaiting_confirmation",  label: "Receipt confirmed",    icon: "checkmark.circle.fill"),
@@ -1084,30 +1195,71 @@ struct OrderTimelineView: View {
     ]
 
     private func isComplete(_ step: TimelineStep) -> Bool {
-        liveOrder.stepDates[step.status] != nil || liveOrder.status.rawValue == step.status
+        if isAwaitingBuyerOnSellerProposal && step.status == OrderStatus.pending.rawValue {
+            return false
+        }
+        if isAwaitingBuyerOnSellerProposal && step.status == OrderStatus.sellerAccepted.rawValue {
+            return false
+        }
+        return liveOrder.stepDates[step.status] != nil || liveOrder.status.rawValue == step.status
     }
 
     private func isCurrent(_ step: TimelineStep) -> Bool {
-        liveOrder.status.rawValue == step.status && liveOrder.stepDates[step.status] == nil
+        if isAwaitingBuyerOnSellerProposal && step.status == OrderStatus.pending.rawValue {
+            return true
+        }
+        let currentStatus = isAwaitingBuyerOnSellerProposal ? OrderStatus.pending.rawValue : liveOrder.status.rawValue
+        return currentStatus == step.status && liveOrder.stepDates[step.status] == nil
     }
 
     private var proposal: MeetupProposal? { liveOrder.meetupProposal }
 
     private var currentActionLabel: String {
         switch liveOrder.status {
-        case .pending:              return "Waiting for seller to accept"
-        case .sellerAccepted:       return "Meetup proposed — waiting for your confirmation"
+        case .pending:
+            return isAwaitingBuyerOnSellerProposal
+                ? "Meetup proposed — waiting for buyer response"
+                : "Waiting for seller to accept"
+        case .sellerAccepted:
+            return isAwaitingBuyerOnSellerProposal
+                ? "Meetup proposed — waiting for buyer response"
+                : "Meetup proposed — waiting for your confirmation"
         case .meetupAgreed:         return isSeller ? "Message Buyer" : "Message Seller"
         case .awaitingConfirmation: return isSeller ? "Awaiting buyer confirmation" : "Confirm Receipt"
-        case .complete:             return "Leave a Review"
+        case .complete:             return "Done"
         case .disputed:             return "Under Review by Knot"
         case .cancelled:            return "Browse Listings"
+        }
+    }
+
+    /// Statuses where we want the bottom action button pinned to the safe area
+    /// (i.e. anything that needs an active CTA — pending, accept, review meetup,
+    /// confirm receipt). Terminal states (complete/cancelled/disputed) just show
+    /// their static banner inline, no pinned footer needed.
+    private var hasPinnedAction: Bool {
+        switch liveOrder.status {
+        case .complete, .cancelled, .disputed: return false
+        default: return true
         }
     }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+
+                // ── Cash payment badge ────────────────────────────────
+                if liveOrder.isCash && liveOrder.status != .cancelled && liveOrder.status != .complete {
+                    HStack(spacing: 10) {
+                        Image(systemName: "banknote")
+                            .foregroundColor(Color(.systemGreen))
+                        Text("Cash payment — pay the \(isSeller ? "buyer" : "seller") in person when you meet.")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                    }
+                    .padding(14)
+                    .background(Color(.systemGreen).opacity(0.08))
+                    .cornerRadius(14)
+                }
 
                 // ── Timeline ──────────────────────────────────────────
                 SectionCard {
@@ -1143,14 +1295,13 @@ struct OrderTimelineView: View {
                 SectionCard {
                     HStack(spacing: 12) {
                         PartyRow(name: isSeller ? order.buyerName : order.sellerName,
-                                 subtitle: isSeller ? "Buyer" : "Seller",
-                                 rating: 4.8)
+                                 subtitle: isSeller ? "Buyer" : "Seller")
                         Button(action: openMessage) {
                             Label("Message", systemImage: "message.fill")
                                 .font(.caption).fontWeight(.semibold)
                                 .foregroundColor(.primary)
                                 .padding(.horizontal, 12).padding(.vertical, 7)
-                                .background(Color(UIColor.systemGray5))
+                                .background(Color.knotSurface)
                                 .cornerRadius(20)
                         }
                     }
@@ -1159,10 +1310,17 @@ struct OrderTimelineView: View {
 
                 // ── Current Action Button ─────────────────────────────
                 NavigationLink(
-                    destination: BuyerConfirmReceiptView(order: Binding(
-                        get: { mutableOrder ?? order },
-                        set: { mutableOrder = $0 }
-                    )),
+                    destination: BuyerConfirmReceiptView(
+                        order: Binding(
+                            get: { mutableOrder ?? order },
+                            set: { mutableOrder = $0 }
+                        ),
+                        onConfirmed: {
+                            // Remove the listing from the Hub once the sale is confirmed,
+                            // unless the seller marked it as recurring.
+                            Task { await profile.deleteSoldListing(listingID: liveOrder.listing.id) }
+                        }
+                    ),
                     isActive: $navigateToReceipt
                 ) { EmptyView() }
 
@@ -1171,7 +1329,24 @@ struct OrderTimelineView: View {
                     isActive: $navigateToComplete
                 ) { EmptyView() }
 
-                if isSeller && liveOrder.status == .pending {
+                if !isSeller && isAwaitingBuyerOnSellerProposal {
+                    NavigationLink(
+                        destination: BuyerMeetupProposalView(
+                            order: Binding(
+                                get: { mutableOrder ?? order },
+                                set: { mutableOrder = $0 }
+                            )
+                        ),
+                        isActive: $navigateToMeetupReview
+                    ) { EmptyView() }
+                }
+
+                if isSeller && (
+                    liveOrder.status == .pending ||
+                    (liveOrder.status == .sellerAccepted && liveOrder.fulfilment == .meetup && (
+                        liveOrder.meetupProposal == nil || liveOrder.meetupProposal?.proposedBy == "buyer"
+                    ))
+                ) {
                     NavigationLink(
                         destination: SellerNewOrderView(
                             order: Binding(
@@ -1183,16 +1358,16 @@ struct OrderTimelineView: View {
                     ) { EmptyView() }
                 }
 
-                // ── Payout banner (seller, complete) ─────────────────
+                // ── Complete banner (seller) ──────────────────────────
                 if isSeller && liveOrder.status == .complete {
                     HStack(spacing: 12) {
                         Image(systemName: "checkmark.seal.fill")
                             .font(.title2)
                             .foregroundColor(Color(.systemGreen))
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Payment received")
+                            Text("Order Complete")
                                 .fontWeight(.semibold)
-                            Text("\(formatSGD(liveOrder.payout)) has been transferred to your account.")
+                            Text("This transaction has been completed successfully.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -1203,11 +1378,47 @@ struct OrderTimelineView: View {
                     .cornerRadius(14)
                 }
 
-                actionButton
+                // Add bottom spacing for terminal states so the inline action
+                // button isn't flush against the navigation bar.
+                if !hasPinnedAction { actionButton }
             }
             .padding()
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        // Pin the action button to the bottom safe area for active states.
+        // safeAreaInset is the SwiftUI-native way to keep a CTA visible
+        // above a ScrollView — same pattern as Apple Pay / Wallet.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if hasPinnedAction {
+                VStack(spacing: 0) {
+                    Divider()
+                    actionButton
+                        .padding(.horizontal)
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
+                        // Anchor the cancel confirmation popover directly to
+                        // the action button so it visibly points at what
+                        // triggered it — not floating mid-screen or pinned
+                        // to the bottom.
+                        .popover(isPresented: $showBuyerCancelConfirm, arrowEdge: .bottom) {
+                            ConfirmPopoverContent(
+                                title  : "Cancel Order?",
+                                message: liveOrder.isCash
+                                    ? "This order will be cancelled. This cannot be undone."
+                                    : "Your payment will be refunded within 3–5 business days. This cannot be undone.",
+                                confirmLabel: liveOrder.isCash ? "Cancel Order" : "Cancel & Get a Refund",
+                                onConfirm: {
+                                    showBuyerCancelConfirm = false
+                                    cancelOrderNow()
+                                },
+                                onCancel: { showBuyerCancelConfirm = false }
+                            )
+                            .presentationCompactAdaptation(.popover)
+                        }
+                }
+                .background(Color.knotBackground)
+            }
+        }
+        .background(Color.knotBackground.ignoresSafeArea())
         .navigationTitle("Order \(liveOrder.id)")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -1221,21 +1432,82 @@ struct OrderTimelineView: View {
                 refreshTimer = Timer.scheduledTimer(withTimeInterval: 12, repeats: true) { _ in
                     Task {
                         await profile.loadOrders()
-                        if let updated = profile.orders.first(where: { $0.id == order.id }) {
-                            mutableOrder = updated
+                        await MainActor.run {
+                            if let updated = profile.orders.first(where: { $0.id == order.id }) {
+                                mutableOrder = updated
+                            }
                         }
                     }
                 }
             }
         }
         .onDisappear { refreshTimer?.invalidate(); refreshTimer = nil }
-        .sheet(isPresented: $showReview)  { LeaveReviewView(order: liveOrder, isSeller: isSeller) }
-        .sheet(isPresented: $showInvoice) { InvoiceView(order: liveOrder) }
+        // Cancel confirmation is now a popover anchored to the action button
+        // (see safeAreaInset above) — visually points at its trigger instead
+        // of appearing as a centered alert or bottom sheet.
+    }
+
+    private func cancelOrderNow() {
+        isCancelling = true
+        Task {
+            try? await OrderService.cancelOrder(orderID: liveOrder.id)
+            await profile.loadOrders()
+            await MainActor.run {
+                if let updated = profile.orders.first(where: { $0.id == liveOrder.id }) {
+                    mutableOrder = updated
+                }
+                isCancelling = false
+                profile.closeOrdersFlowSignal.toggle()
+            }
+        }
     }
 
     @ViewBuilder
     private var actionButton: some View {
         switch liveOrder.status {
+        case .pending where isSeller && isAwaitingBuyerOnSellerProposal:
+            VStack(spacing: 10) {
+                statusPill(label: "Waiting for buyer to accept or re-propose your meetup", color: Color(.systemBlue))
+                Button(action: openMessage) {
+                    Label("Message Buyer", systemImage: "message.fill")
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color.knotOnAccent)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.knotAccent)
+                        .cornerRadius(14)
+                }
+            }
+
+        case .pending where !isSeller && isAwaitingBuyerOnSellerProposal:
+            VStack(spacing: 10) {
+                Button(action: { navigateToMeetupReview = true }) {
+                    Label("Review Meetup", systemImage: "mappin.and.ellipse")
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.knotAccent)
+                        .cornerRadius(14)
+                }
+                Button(action: { showBuyerCancelConfirm = true }) {
+                    Group {
+                        if isCancelling {
+                            ProgressView().tint(.red)
+                        } else {
+                            Label("Cancel Order", systemImage: "xmark.circle")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.red)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.systemRed).opacity(0.08))
+                    .cornerRadius(14)
+                }
+                .disabled(isCancelling)
+            }
+
         case .pending where isSeller:
             Button(action: { navigateToAccept = true }) {
                 Label("Review & Accept Order", systemImage: "checkmark.circle.fill")
@@ -1248,17 +1520,137 @@ struct OrderTimelineView: View {
             }
 
         case .pending:
-            statusPill(label: "Waiting for seller to accept", color: Color(.systemOrange))
+            // Buyer is waiting — show status + allow cancel while no meetup is locked in.
+            VStack(spacing: 10) {
+                statusPill(label: "Waiting for seller to accept", color: Color(.systemOrange))
+                Button(action: { showBuyerCancelConfirm = true }) {
+                    Group {
+                        if isCancelling {
+                            ProgressView().tint(.red)
+                        } else {
+                            Label("Cancel Order", systemImage: "xmark.circle")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.red)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.systemRed).opacity(0.08))
+                    .cornerRadius(14)
+                }
+                .disabled(isCancelling)
+            }
+
+        case .sellerAccepted where !isSeller:
+            // Buyer: seller has proposed or counter-proposed a meetup.
+            VStack(spacing: 10) {
+                if liveOrder.meetupProposal?.proposedBy == "seller" {
+                    Button(action: { navigateToMeetupReview = true }) {
+                        Label("Review Meetup", systemImage: "mappin.and.ellipse")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.knotAccent)
+                            .cornerRadius(14)
+                    }
+                } else {
+                    statusPill(label: "Meetup proposed — awaiting your confirmation", color: Color(.systemBlue))
+                }
+
+                Button(action: { showBuyerCancelConfirm = true }) {
+                    Group {
+                        if isCancelling {
+                            ProgressView().tint(.red)
+                        } else {
+                            Label("Cancel Order", systemImage: "xmark.circle")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.red)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.systemRed).opacity(0.08))
+                    .cornerRadius(14)
+                }
+                .disabled(isCancelling)
+            }
 
         case .sellerAccepted:
-            statusPill(label: "Meetup proposed — awaiting your confirmation", color: Color(.systemBlue))
+            if isSeller && liveOrder.fulfilment == .meetup && liveOrder.meetupProposal?.proposedBy == "buyer" {
+                VStack(spacing: 12) {
+                    statusPill(label: "Buyer proposed a meetup — send a new proposal or accept it", color: Color(.systemBlue))
+                    HStack(spacing: 10) {
+                        Image(systemName: "bell.fill")
+                            .foregroundColor(Color(.systemOrange))
+                        Text("After the handoff, remind the buyer to tap \"I Received the Item\" to close the order.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemOrange).opacity(0.08))
+                    .cornerRadius(12)
+
+                    Button(action: { navigateToAccept = true }) {
+                        Label("Propose New Meetup", systemImage: "mappin.and.ellipse")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.knotAccent)
+                            .cornerRadius(14)
+                    }
+                }
+            } else if isSeller && liveOrder.fulfilment == .meetup && liveOrder.meetupProposal == nil {
+                VStack(spacing: 12) {
+                    statusPill(label: "Order accepted — progress updated", color: Color(.systemBlue))
+                    HStack(spacing: 10) {
+                        Image(systemName: "bell.fill")
+                            .foregroundColor(Color(.systemOrange))
+                        Text("When you've handed over the item, remind the buyer to tap \"I Received the Item\" to close the order.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemOrange).opacity(0.08))
+                    .cornerRadius(12)
+
+                    Button(action: { navigateToAccept = true }) {
+                        Label("Set Meetup Details", systemImage: "mappin.circle.fill")
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.knotAccent)
+                            .cornerRadius(14)
+                    }
+                }
+            } else {
+                // Seller: waiting for buyer to confirm the meetup they proposed.
+                VStack(spacing: 12) {
+                    statusPill(label: "Waiting for buyer to confirm meetup", color: Color(.systemBlue))
+                    HStack(spacing: 10) {
+                        Image(systemName: "bell.fill")
+                            .foregroundColor(Color(.systemOrange))
+                        Text("After the exchange, remind the buyer to tap \"I Received the Item\" in the order page.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemOrange).opacity(0.08))
+                    .cornerRadius(12)
+                }
+            }
 
         case .meetupAgreed where !isSeller:
             VStack(spacing: 12) {
                 HStack(spacing: 10) {
                     Image(systemName: "info.circle.fill")
                         .foregroundColor(Color(.systemBlue))
-                    Text("Once you have the item, tap below to release payment to the seller.")
+                    Text("Once you have the item, tap below to close the order.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -1277,29 +1669,40 @@ struct OrderTimelineView: View {
 
         case .meetupAgreed:
             VStack(spacing: 12) {
-                HStack(spacing: 10) {
-                    Image(systemName: "clock.fill")
-                        .foregroundColor(Color(.systemOrange))
-                    Text("Remind the buyer to press \"I Received the Item\" once they have it. Payment releases then.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                if isSeller {
+                    HStack(spacing: 10) {
+                        Image(systemName: "clock.fill")
+                            .foregroundColor(Color(.systemOrange))
+                        Text("Meet the buyer and collect cash. The buyer will confirm collection.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(.systemOrange).opacity(0.08))
+                    .cornerRadius(12)
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemOrange).opacity(0.08))
-                .cornerRadius(12)
-
+                // Cash buyer can mark collected directly from meetup_agreed
+                if !isSeller && liveOrder.isCash {
+                    Button(action: { navigateToReceipt = true }) {
+                        Label("I've Collected the Item", systemImage: "checkmark.circle.fill")
+                            .fontWeight(.semibold).foregroundColor(.white)
+                            .frame(maxWidth: .infinity).padding()
+                            .background(Color(.systemGreen)).cornerRadius(14)
+                    }
+                }
                 Button(action: openMessage) {
-                    Label("Message Buyer", systemImage: "message.fill")
-                        .fontWeight(.semibold).foregroundColor(.white)
+                    Label(isSeller ? "Message Buyer" : "Message Seller", systemImage: "message.fill")
+                        .fontWeight(.semibold).foregroundColor(Color.knotOnAccent)
                         .frame(maxWidth: .infinity).padding()
-                        .background(Color.black).cornerRadius(14)
+                        .background(Color.knotAccent).cornerRadius(14)
                 }
             }
 
         case .awaitingConfirmation where !isSeller:
             Button(action: { navigateToReceipt = true }) {
-                Label("Confirm Receipt", systemImage: "checkmark.circle.fill")
+                Label("I've Collected the Item",
+                      systemImage: "checkmark.circle.fill")
                     .fontWeight(.semibold).foregroundColor(.white)
                     .frame(maxWidth: .infinity).padding()
                     .background(Color(.systemGreen)).cornerRadius(14)
@@ -1309,37 +1712,29 @@ struct OrderTimelineView: View {
             statusPill(label: "Awaiting buyer confirmation", color: Color(.systemOrange))
 
         case .complete:
-            VStack(spacing: 12) {
-                Button(action: { showReview = true }) {
-                    Label("Leave a Review", systemImage: "star.fill")
-                        .fontWeight(.semibold).foregroundColor(.white)
-                        .frame(maxWidth: .infinity).padding()
-                        .background(Color.black).cornerRadius(14)
-                }
-                if !isSeller {
-                    Button(action: { showInvoice = true }) {
-                        Label("View Invoice", systemImage: "doc.text.fill")
-                            .fontWeight(.semibold).foregroundColor(.primary)
-                            .frame(maxWidth: .infinity).padding()
-                            .background(Color(UIColor.secondarySystemGroupedBackground))
-                            .cornerRadius(14)
-                    }
-                }
-            }
+            statusPill(label: "Transaction complete", color: Color(.systemGreen))
 
         case .disputed:
             statusPill(label: "Under Review by Knot", color: Color(.systemOrange))
 
         case .cancelled:
-            statusPill(label: "Order Cancelled — Refund in 3–5 days", color: Color(.systemRed))
+            statusPill(label: liveOrder.isCash ? "Order Cancelled" : "Order Cancelled — Refund in 3–5 days", color: Color(.systemRed))
         }
     }
 
     private func openMessage() {
-        let other = isSeller ? order.buyerName : order.sellerName
+        // Use the UUID-based opener — the name-based one fails silently if the
+        // stored name doesn't match exactly (casing/whitespace/rename).
+        let otherID   = isSeller ? order.buyerId   : order.sellerId
+        let otherName = isSeller ? order.buyerName : order.sellerName
+
+        // Switch tab first so MessagesView mounts and its .onChange observer
+        // is ready. Then dismiss the current view. Finally, after the dismiss
+        // animation completes, set the pending ID to navigate into the chat.
+        profile.selectedTab = .messages
         dismiss()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            profile.openConversation(with: other)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            profile.openConversation(withUserID: otherID, name: otherName)
         }
     }
 
@@ -1354,23 +1749,27 @@ struct OrderTimelineView: View {
     }
 
     private func timelineRow(step: TimelineStep, idx: Int) -> some View {
-        let done    = liveOrder.stepDates[step.status] != nil
-        let current = liveOrder.status.rawValue == step.status
+        let done    = isComplete(step)
+        let current = isCurrent(step)
 
         return HStack(alignment: .top, spacing: 14) {
             VStack(spacing: 0) {
                 Circle()
-                    .fill(done || current ? Color(.systemBlue) : Color(UIColor.systemGray4))
+                    .fill(done || current ? Color(.systemBlue) : Color.knotSurface)
                     .frame(width: 22, height: 22)
                     .overlay {
                         Image(systemName: done ? "checkmark" : step.icon)
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(done || current ? .white : Color(UIColor.systemGray3))
+                            .foregroundColor(done || current ? Color.knotOnAccent : Color.knotMuted)
                     }
                 if idx < steps.count - 1 {
+                    // Stretch the connector to the full row height so it always
+                    // meets the next circle — a fixed height leaves a gap when the
+                    // text column (label + date + bottom padding) is taller.
                     Rectangle()
-                        .fill(done ? Color(.systemBlue) : Color(UIColor.systemGray5))
-                        .frame(width: 2, height: 36)
+                        .fill(done ? Color(.systemBlue) : Color.knotSurface)
+                        .frame(width: 2)
+                        .frame(maxHeight: .infinity)
                 }
             }
 
@@ -1378,7 +1777,7 @@ struct OrderTimelineView: View {
                 Text(step.label)
                     .font(.subheadline)
                     .fontWeight(current ? .semibold : .regular)
-                    .foregroundColor(done || current ? .primary : Color(UIColor.systemGray3))
+                    .foregroundColor(done || current ? .primary : Color.knotMuted)
                 if let date = liveOrder.stepDates[step.status] {
                     Text(formatDate(date))
                         .font(.caption)
@@ -1413,7 +1812,9 @@ struct OrderTimelineView: View {
                 .font(.title2).foregroundColor(Color(.systemRed))
             VStack(alignment: .leading, spacing: 3) {
                 Text("Order Cancelled").fontWeight(.semibold)
-                Text("Seller did not respond. Refund in 3–5 business days.")
+                Text(order.isCash
+                     ? "Seller did not respond. This order has been cancelled."
+                     : "Seller did not respond. Refund in 3–5 business days.")
                     .font(.caption).foregroundColor(.secondary)
             }
         }
@@ -1433,106 +1834,11 @@ struct OrderTimelineView: View {
     }
 }
 
-// MARK: - LeaveReviewView
-
-struct LeaveReviewView: View {
-    let order: KnotOrder
-    let isSeller: Bool
-    @Environment(\.dismiss) var dismiss
-
-    @State private var rating  = 0
-    @State private var comment = ""
-    @State private var submitted = false
-
-    private var reviewTarget: String { isSeller ? order.buyerName : order.sellerName }
-    private var canSubmit: Bool { rating > 0 }
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-
-                    // ── Avatar ────────────────────────────────────────
-                    VStack(spacing: 10) {
-                        Circle()
-                            .fill(Color(UIColor.systemGray4))
-                            .frame(width: 64, height: 64)
-                            .overlay {
-                                Text(String(reviewTarget.prefix(1)))
-                                    .font(.title).fontWeight(.semibold)
-                            }
-                        Text("How was your experience with \(reviewTarget)?")
-                            .font(.headline)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 8)
-
-                    // ── Star Rating ───────────────────────────────────
-                    HStack(spacing: 12) {
-                        ForEach(1...5, id: \.self) { star in
-                            Image(systemName: star <= rating ? "star.fill" : "star")
-                                .font(.system(size: 36))
-                                .foregroundColor(star <= rating ? Color(.systemOrange) : Color(UIColor.systemGray4))
-                                .onTapGesture { withAnimation(.spring(response: 0.2)) { rating = star } }
-                        }
-                    }
-
-                    // ── Comment ───────────────────────────────────────
-                    SectionCard {
-                        TextEditor(text: $comment)
-                            .frame(minHeight: 100)
-                            .padding(8)
-                            .overlay(alignment: .topLeading) {
-                                if comment.isEmpty {
-                                    Text("Leave a comment (optional)...")
-                                        .foregroundColor(Color(UIColor.systemGray3))
-                                        .padding(14)
-                                        .allowsHitTesting(false)
-                                }
-                            }
-                    }
-
-                    Button(action: submit) {
-                        Text("Submit Review")
-                            .fontWeight(.semibold)
-                            .foregroundColor(canSubmit ? .white : Color(UIColor.systemGray3))
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(canSubmit ? Color.black : Color(UIColor.systemGray5))
-                            .cornerRadius(14)
-                    }
-                    .disabled(!canSubmit)
-
-                    Button("Skip") { dismiss() }
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-            }
-            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("Leave a Review")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            }
-            .alert("Review Submitted", isPresented: $submitted) {
-                Button("Done") { dismiss() }
-            } message: {
-                Text("Thank you for your feedback!")
-            }
-        }
-    }
-
-    private func submit() {
-        // TODO: submit to Supabase
-        submitted = true
-    }
-}
-
-
 // MARK: - MyOrdersView
 
 struct MyOrdersView: View {
     @Environment(UserProfile.self) var profile
+    @Environment(\.dismiss) private var dismiss
 
     private var active: [KnotOrder] {
         profile.orders.filter { $0.status != .complete && $0.status != .cancelled }
@@ -1551,18 +1857,18 @@ struct MyOrdersView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "bag")
                         .font(.system(size: 52))
-                        .foregroundColor(Color(UIColor.systemGray3))
+                        .foregroundColor(Color.knotMuted)
                     Text("No orders yet")
                         .font(.headline)
-                        .foregroundColor(Color(UIColor.systemGray))
+                        .foregroundColor(Color.knotMuted)
                     Text("Buy or sell something and it will appear here.")
                         .font(.subheadline)
-                        .foregroundColor(Color(UIColor.systemGray3))
+                        .foregroundColor(Color.knotMuted)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 40)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(UIColor.systemGroupedBackground))
+                .background(Color.knotBackground)
             } else {
                 List {
                     if !active.isEmpty {
@@ -1595,6 +1901,11 @@ struct MyOrdersView: View {
         .navigationTitle("My Orders")
         .navigationBarTitleDisplayMode(.inline)
         .task { await profile.loadOrders() }
+        .onChange(of: profile.pendingChatConversationID) { _, id in
+            if id != nil { dismiss() }
+        }
+        // Close the whole orders sheet back to the Hub (e.g. after accepting a meetup).
+        .onChange(of: profile.closeOrdersFlowSignal) { _, _ in dismiss() }
     }
 }
 
@@ -1604,11 +1915,11 @@ private struct OrderRow: View {
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color(UIColor.systemGray5))
+                .fill(Color.knotSurface)
                 .frame(width: 46, height: 46)
                 .overlay {
                     Image(systemName: order.listing.type.icon)
-                        .foregroundColor(Color(UIColor.systemGray2))
+                        .foregroundColor(Color.knotMuted)
                 }
             VStack(alignment: .leading, spacing: 3) {
                 Text(order.listing.name)
@@ -1654,7 +1965,7 @@ private struct OrderRow: View {
         buyerName: "Ruhaan", sellerName: listing.sellerName,
         sellerId: UUID(), buyerId: UUID(),
         subtotal: listing.price * 100, knotFeeRate: 0.10,
-        fulfilment: .meetup, address: "Bishan MRT",
+        fulfilment: .meetup, paymentMethod: "cash", address: "Bishan MRT",
         date: Date(), status: .meetupAgreed, escrow: .held,
         meetupProposal: MeetupProposal(location: "Bishan MRT Exit A",
                                        date: Date().addingTimeInterval(86400),
